@@ -1,5 +1,7 @@
 use std::collections::BTreeSet;
 
+mod gauss_lu;
+
 const GND: &str = "0";
 
 #[derive(Debug)]
@@ -47,7 +49,7 @@ fn main() {
 
     load_stamps(&elems, &nodes, &mut a_mat, &mut b_vec);
 
-    gauss_lu(&mut a_mat, &mut b_vec, &mut x_vec);
+    gauss_lu::solve(&mut a_mat, &mut b_vec, &mut x_vec);
 
     for (node, val) in nodes.iter().zip(x_vec.iter()) {
         println!("{node}: {val}");
@@ -131,55 +133,6 @@ fn load_stamps(
                     a_mat[j][i] -= g;
                 }
             }
-        }
-    }
-}
-
-fn gauss_lu(a_mat: &mut Vec<Vec<f64>>, b_vec: &mut Vec<f64>, x_vec: &mut Vec<f64>) -> () {
-    for curr_row in 0..a_mat.len() {
-        // Pivot
-        let mut max_idx = curr_row;
-        let mut max_val = a_mat[curr_row][curr_row].abs();
-
-        for next_row in curr_row + 1..a_mat.len() {
-            let next_val = a_mat[curr_row][next_row].abs();
-
-            if next_val > max_val {
-                max_idx = next_row;
-                max_val = next_val;
-            }
-        }
-
-        if max_idx != curr_row {
-            a_mat.swap(curr_row, max_idx);
-            b_vec.swap(curr_row, max_idx);
-        }
-
-        // Scale
-        for next_row in curr_row + 1..a_mat.len() {
-            a_mat[next_row][curr_row] /= a_mat[curr_row][curr_row];
-        }
-
-        // Subtract
-        for next_row in curr_row + 1..a_mat.len() {
-            for next_col in curr_row + 1..a_mat.len() {
-                a_mat[next_row][next_col] -= a_mat[next_row][curr_row] * a_mat[curr_row][next_col];
-            }
-
-            b_vec[next_row] -= a_mat[next_row][curr_row] * b_vec[curr_row];
-        }
-    }
-
-    // Backwards substitution
-    for row in 0..b_vec.len() {
-        x_vec[row] = b_vec[row];
-    }
-
-    for curr_row in (0..a_mat.len()).rev() {
-        x_vec[curr_row] /= a_mat[curr_row][curr_row];
-
-        for next_row in (0..curr_row).rev() {
-            x_vec[next_row] -= x_vec[curr_row] * a_mat[next_row][curr_row];
         }
     }
 }
