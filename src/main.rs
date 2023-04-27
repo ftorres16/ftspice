@@ -19,7 +19,6 @@ struct SpiceElem {
 
 fn main() {
     let mut elems: Vec<SpiceElem> = Vec::new();
-    let mut nodes: BTreeSet<String> = BTreeSet::new();
 
     elems.push(SpiceElem {
         dtype: DeviceType::Vdd,
@@ -40,6 +39,24 @@ fn main() {
         value: 1e3,
     });
 
+    let nodes = find_nodes(&elems);
+
+    let mut a_mat = vec![vec![0.0; nodes.len()]; nodes.len()];
+    let mut b_vec = vec![0.0; nodes.len()];
+    let mut x_vec = vec![0.0; nodes.len()];
+
+    load_stamps(&elems, &nodes, &mut a_mat, &mut b_vec);
+
+    gauss_lu(&mut a_mat, &mut b_vec, &mut x_vec);
+
+    for (node, val) in nodes.iter().zip(x_vec.iter()) {
+        println!("{node}: {val}");
+    }
+}
+
+fn find_nodes(elems: &Vec<SpiceElem>) -> BTreeSet<String> {
+    let mut nodes: BTreeSet<String> = BTreeSet::new();
+
     for elem in elems.iter() {
         for node in elem.nodes.iter() {
             nodes.insert(node.to_string());
@@ -55,17 +72,7 @@ fn main() {
     }
     nodes.remove(GND);
 
-    let mut a_mat = vec![vec![0.0; nodes.len()]; nodes.len()];
-    let mut b_vec = vec![0.0; nodes.len()];
-    let mut x_vec = vec![0.0; nodes.len()];
-
-    load_stamps(&elems, &nodes, &mut a_mat, &mut b_vec);
-
-    gauss_lu(&mut a_mat, &mut b_vec, &mut x_vec);
-
-    for (node, val) in nodes.iter().zip(x_vec.iter()) {
-        println!("{node}: {val}");
-    }
+    nodes
 }
 
 fn load_stamps(
