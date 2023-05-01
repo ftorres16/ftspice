@@ -15,12 +15,8 @@ pub struct SpiceElem {
     pub value: f64,
 }
 
-pub trait Stamp {
-    fn linear_stamp(&self, nodes: &BTreeSet<String>, a: &mut Vec<Vec<f64>>, b: &mut Vec<f64>);
-}
-
-impl Stamp for SpiceElem {
-    fn linear_stamp(&self, nodes: &BTreeSet<String>, a: &mut Vec<Vec<f64>>, b: &mut Vec<f64>) {
+impl SpiceElem {
+    pub fn linear_stamp(&self, nodes: &BTreeSet<String>, a: &mut Vec<Vec<f64>>, b: &mut Vec<f64>) {
         match self.dtype {
             DType::Vdd => {
                 let vneg_idx = nodes.iter().position(|x| x.to_string() == self.nodes[0]);

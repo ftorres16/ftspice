@@ -2,7 +2,6 @@ use std::collections::BTreeSet;
 
 mod device;
 mod gauss_lu;
-use crate::device::Stamp;
 
 const GND: &str = "0";
 
