@@ -24,7 +24,7 @@ impl SpiceElem {
                 let is_idx = nodes
                     .iter()
                     .position(|x| x.to_string() == self.name)
-                    .unwrap();
+                    .expect("Couldn't find matrix entry for source.");
 
                 b[is_idx] += self.value;
 
