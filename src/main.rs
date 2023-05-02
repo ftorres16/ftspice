@@ -17,14 +17,34 @@ mod gauss_lu;
 const GND: &str = "0";
 
 fn main() {
-    let unparsed_file = fs::read_to_string("test/test.sp").expect("Cannot read file.");
+    let elems = parse_spice_file("test/test.sp");
+
+    let nodes = find_nodes(&elems);
+
+    let mut a_mat = vec![vec![0.0; nodes.len()]; nodes.len()];
+    let mut b_vec = vec![0.0; nodes.len()];
+    let mut x_vec = vec![0.0; nodes.len()];
+
+    for elem in elems.iter() {
+        elem.linear_stamp(&nodes, &mut a_mat, &mut b_vec);
+    }
+
+    gauss_lu::solve(&mut a_mat, &mut b_vec, &mut x_vec);
+
+    for (node, val) in nodes.iter().zip(x_vec.iter()) {
+        println!("{node}: {val}");
+    }
+}
+
+fn parse_spice_file(file: &str) -> Vec<device::SpiceElem> {
+    let mut elems = Vec::new();
+
+    let unparsed_file = fs::read_to_string(file).expect("Cannot read file.");
 
     let file = SpiceParser::parse(Rule::file, &unparsed_file)
         .expect("Unsuccessful parse")
         .next()
         .unwrap(); // unwrap `file` rule, never fails
-
-    let mut elems: Vec<device::SpiceElem> = Vec::new();
 
     for line in file.into_inner() {
         match line.as_rule() {
@@ -74,21 +94,7 @@ fn main() {
         }
     }
 
-    let nodes = find_nodes(&elems);
-
-    let mut a_mat = vec![vec![0.0; nodes.len()]; nodes.len()];
-    let mut b_vec = vec![0.0; nodes.len()];
-    let mut x_vec = vec![0.0; nodes.len()];
-
-    for elem in elems.iter() {
-        elem.linear_stamp(&nodes, &mut a_mat, &mut b_vec);
-    }
-
-    gauss_lu::solve(&mut a_mat, &mut b_vec, &mut x_vec);
-
-    for (node, val) in nodes.iter().zip(x_vec.iter()) {
-        println!("{node}: {val}");
-    }
+    elems
 }
 
 fn find_nodes(elems: &Vec<device::SpiceElem>) -> BTreeSet<String> {
