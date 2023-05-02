@@ -1,0 +1,26 @@
+value = @{ ASCII_DIGIT+ }
+name = @{ ASCII_ALPHANUMERIC+ }
+
+r_name = @{ ^"R" ~ name }
+r_node = { r_name ~ name ~ name ~ ^"R" ~ "=" ~ value }
+
+v_name = @{ ^"V" ~ name }
+v_value = @{ value ~ ^"V" }
+v_node = { v_name ~ name ~ name ~ v_value}
+
+node = { r_node | v_node }
+
+op_cmd = { ".op" }
+command =  { op_cmd }
+
+end_cmd = { ^".end" ~ NEWLINE? }
+
+file = { SOI ~ ((node | command)? ~ NEWLINE)* ~ end_cmd ~ EOI }
+
+WHITESPACE = _{ " " }
+COMMENT = _{
+	"*" ~ (!NEWLINE ~ ANY)* ~ NEWLINE
+	| "$" ~ (!NEWLINE ~ ANY)* ~ NEWLINE
+	| "*" ~ (!NEWLINE ~ ANY)* ~ "$"
+	| "$" ~ (!NEWLINE ~ ANY)* ~ "$"
+}
