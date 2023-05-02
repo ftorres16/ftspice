@@ -13,7 +13,7 @@ node = { r_node | v_node }
 op_cmd = { ".op" }
 command =  { op_cmd }
 
-end_cmd = { ^".end" ~ NEWLINE? }
+end_cmd = _{ ^".end" ~ NEWLINE? }
 
 file = { SOI ~ ((node | command)? ~ NEWLINE)* ~ end_cmd ~ EOI }
 
