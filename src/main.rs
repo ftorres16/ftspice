@@ -1,31 +1,22 @@
 use std::collections::BTreeSet;
+use std::env;
+
+extern crate pest;
+#[macro_use]
+extern crate pest_derive;
 
 mod device;
 mod gauss_lu;
+mod parser;
 
 const GND: &str = "0";
 
 fn main() {
-    let mut elems: Vec<device::SpiceElem> = Vec::new();
+    let args: Vec<String> = env::args().collect();
 
-    elems.push(device::SpiceElem {
-        dtype: device::DType::Vdd,
-        name: "V0".to_string(),
-        nodes: vec!["0".to_string(), "1".to_string()],
-        value: 3.0,
-    });
-    elems.push(device::SpiceElem {
-        dtype: device::DType::Res,
-        name: "R1".to_string(),
-        nodes: vec!["1".to_string(), "2".to_string()],
-        value: 1e3,
-    });
-    elems.push(device::SpiceElem {
-        dtype: device::DType::Res,
-        name: "R1".to_string(),
-        nodes: vec!["2".to_string(), "0".to_string()],
-        value: 1e3,
-    });
+    let file = &args[1];
+
+    let elems = parser::parse_spice_file(file);
 
     let nodes = find_nodes(&elems);
 

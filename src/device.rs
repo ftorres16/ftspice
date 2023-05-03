@@ -22,11 +22,11 @@ impl SpiceElem {
     pub fn linear_stamp(&self, nodes: &BTreeSet<String>, a: &mut Vec<Vec<f64>>, b: &mut Vec<f64>) {
         match self.dtype {
             DType::Vdd => {
-                let vneg_idx = nodes.iter().position(|x| x.to_string() == self.nodes[0]);
-                let vpos_idx = nodes.iter().position(|x| x.to_string() == self.nodes[1]);
+                let vneg_idx = nodes.iter().position(|x| x == &self.nodes[0]);
+                let vpos_idx = nodes.iter().position(|x| x == &self.nodes[1]);
                 let is_idx = nodes
                     .iter()
-                    .position(|x| x.to_string() == self.name)
+                    .position(|x| x == &self.name)
                     .expect("Couldn't find matrix entry for source.");
 
                 b[is_idx] += self.value;
@@ -42,8 +42,8 @@ impl SpiceElem {
                 }
             }
             DType::Idd => {
-                let vneg_idx = nodes.iter().position(|x| x.to_string() == self.nodes[0]);
-                let vpos_idx = nodes.iter().position(|x| x.to_string() == self.nodes[1]);
+                let vneg_idx = nodes.iter().position(|x| x == &self.nodes[0]);
+                let vpos_idx = nodes.iter().position(|x| x == &self.nodes[1]);
 
                 if let Some(i) = vpos_idx {
                     b[i] += self.value;
@@ -55,8 +55,8 @@ impl SpiceElem {
             DType::Res => {
                 let g = 1.0 / self.value;
 
-                let vneg_idx = nodes.iter().position(|x| x.to_string() == self.nodes[0]);
-                let vpos_idx = nodes.iter().position(|x| x.to_string() == self.nodes[1]);
+                let vneg_idx = nodes.iter().position(|x| x == &self.nodes[0]);
+                let vpos_idx = nodes.iter().position(|x| x == &self.nodes[1]);
 
                 if let Some(i) = vneg_idx {
                     a[i][i] += g;
@@ -87,8 +87,8 @@ impl SpiceElem {
             DType::Idd => {}
             DType::Res => {}
             DType::Diode => {
-                let vpos_idx = nodes.iter().position(|x| x.to_string() == self.nodes[0]);
-                let vneg_idx = nodes.iter().position(|x| x.to_string() == self.nodes[1]);
+                let vpos_idx = nodes.iter().position(|x| x == &self.nodes[0]);
+                let vneg_idx = nodes.iter().position(|x| x == &self.nodes[1]);
 
                 let vpos = match vpos_idx {
                     Some(i) => x[i],
