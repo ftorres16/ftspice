@@ -1,5 +1,11 @@
-value = @{ ASCII_DIGIT+ }
-name = @{ ASCII_ALPHANUMERIC+ }
+file = { SOI ~ ((node | command)? ~ NEWLINE)* ~ end_cmd ~ EOI }
+
+command =  { op_cmd }
+
+op_cmd = { ".op" }
+end_cmd = _{ ^".end" ~ NEWLINE? }
+
+node = { r_node | v_node }
 
 r_name = @{ ^"R" ~ name }
 r_node = { r_name ~ name ~ name ~ ^"R" ~ "=" ~ value }
@@ -8,14 +14,10 @@ v_name = @{ ^"V" ~ name }
 v_value = @{ value ~ ^"V" }
 v_node = { v_name ~ name ~ name ~ v_value}
 
-node = { r_node | v_node }
-
-op_cmd = { ".op" }
-command =  { op_cmd }
-
-end_cmd = _{ ^".end" ~ NEWLINE? }
-
-file = { SOI ~ ((node | command)? ~ NEWLINE)* ~ end_cmd ~ EOI }
+name = @{ ASCII_ALPHANUMERIC+ }
+value = ${ number ~ prefix? }
+number = @{ "-"? ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)?}
+prefix = { "G" | "M" | "k" | "h" | "da" | "d" | "c" | "m" | "u" | "n" | "p" | "f" }
 
 WHITESPACE = _{ " " }
 COMMENT = _{

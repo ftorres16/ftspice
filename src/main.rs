@@ -5,6 +5,7 @@ extern crate pest;
 #[macro_use]
 extern crate pest_derive;
 
+use pest::iterators::Pairs;
 use pest::Parser;
 
 #[derive(Parser)]
@@ -57,12 +58,8 @@ fn parse_spice_file(file: &str) -> Vec<device::SpiceElem> {
                         let name = node_details.next().unwrap().as_str();
                         let node_0 = node_details.next().unwrap().as_str();
                         let node_1 = node_details.next().unwrap().as_str();
-                        let value = node_details
-                            .next()
-                            .unwrap()
-                            .as_str()
-                            .parse::<f64>()
-                            .unwrap();
+
+                        let value = parse_value(node_details.next().unwrap().into_inner());
 
                         elems.push(device::SpiceElem {
                             dtype: device::DType::Res,
@@ -76,8 +73,15 @@ fn parse_spice_file(file: &str) -> Vec<device::SpiceElem> {
                         let name = node_details.next().unwrap().as_str();
                         let node_1 = node_details.next().unwrap().as_str();
                         let node_0 = node_details.next().unwrap().as_str();
-                        let value_str = node_details.next().unwrap().as_str();
-                        let value = value_str[..value_str.len() - 1].parse::<f64>().unwrap();
+                        let value = parse_value(
+                            node_details
+                                .next()
+                                .unwrap()
+                                .into_inner()
+                                .next()
+                                .unwrap()
+                                .into_inner(),
+                        );
 
                         elems.push(device::SpiceElem {
                             dtype: device::DType::Vdd,
@@ -95,6 +99,36 @@ fn parse_spice_file(file: &str) -> Vec<device::SpiceElem> {
     }
 
     elems
+}
+
+fn parse_value(mut value_details: Pairs<Rule>) -> f64 {
+    let mut value = value_details
+        .next()
+        .unwrap()
+        .as_str()
+        .parse::<f64>()
+        .unwrap();
+
+    if let Some(prefix) = value_details.next() {
+        let mult = match prefix.as_str() {
+            "G" => 1e9,
+            "M" => 1e6,
+            "k" => 1e3,
+            "h" => 1e2,
+            "da" => 1e1,
+            "d" => 1e-1,
+            "c" => 1e-2,
+            "m" => 1e-3,
+            "u" => 1e-6,
+            "n" => 1e-9,
+            "p" => 1e-12,
+            "f" => 1e-18,
+            _ => unreachable!(),
+        };
+        value *= mult;
+    }
+
+    value
 }
 
 fn find_nodes(elems: &Vec<device::SpiceElem>) -> BTreeSet<String> {
