@@ -93,11 +93,92 @@ fn parse_value(value: Pair<Rule>) -> f64 {
             "u" => 1e-6,
             "n" => 1e-9,
             "p" => 1e-12,
-            "f" => 1e-18,
+            "f" => 1e-15,
             _ => unreachable!(),
         };
         value *= mult;
     }
 
     value
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_spice_file_generic() {
+        let elems = parse_spice_file("test/test.sp");
+
+        assert_eq!(elems.len(), 3);
+        assert!(matches!(elems[0].dtype, device::DType::Vdd));
+        assert!(matches!(elems[1].dtype, device::DType::Res));
+        assert!(matches!(elems[2].dtype, device::DType::Res));
+    }
+
+    #[test]
+    fn parse_res_generic() {
+        let pair = SpiceParser::parse(Rule::r_node, "R1 1 0 R=2.2k")
+            .unwrap()
+            .next()
+            .unwrap();
+        let elem = parse_res(pair);
+
+        assert!(matches!(elem.dtype, device::DType::Res));
+        assert_eq!(elem.name, "R1");
+        assert_eq!(elem.nodes, ["1", "0"]);
+        assert_eq!(elem.value, 2.2e3);
+    }
+
+    #[test]
+    fn parse_vdd_generic() {
+        let pair = SpiceParser::parse(Rule::v_node, "V1 1 0 4.0V")
+            .unwrap()
+            .next()
+            .unwrap();
+        let elem = parse_vdd(pair);
+
+        assert!(matches!(elem.dtype, device::DType::Vdd));
+        assert_eq!(elem.name, "V1");
+        assert_eq!(elem.nodes, ["0", "1"]);
+        assert_eq!(elem.value, 4.0);
+    }
+
+    #[test]
+    fn parse_value_generic() {
+        let test_vals = [("1.23", 1.23), ("-50", -50.0), ("1.3k", 1300.0)];
+
+        for (tgt_str, tgt_val) in test_vals.iter() {
+            let pair = SpiceParser::parse(Rule::value, tgt_str)
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(&parse_value(pair), tgt_val);
+        }
+    }
+
+    #[test]
+    fn parse_value_prefixes() {
+        let test_vals = [
+            ("1.0f", 1e-15),
+            ("1.0p", 1e-12),
+            ("1.0n", 1.0e-9),
+            ("1.0u", 1.0e-6),
+            ("1.0m", 1.0e-3),
+            ("1.0c", 1.0e-2),
+            ("1.0d", 1.0e-1),
+            ("1.0da", 1.0e1),
+            ("1.0h", 1.0e2),
+            ("1.0k", 1.0e3),
+            ("1.0M", 1.0e6),
+            ("1.0G", 1.0e9),
+        ];
+        for (tgt_str, tgt_val) in test_vals.iter() {
+            let pair = SpiceParser::parse(Rule::value, tgt_str)
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(&parse_value(pair), tgt_val);
+        }
+    }
 }
