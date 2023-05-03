@@ -1,4 +1,4 @@
-*Basic test
+* Basic test - Voltage Divider
 
 V1 1 0 4000mV
 

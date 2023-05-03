@@ -27,6 +27,7 @@ pub fn parse_spice_file(file: &str) -> Vec<device::SpiceElem> {
                 match node.as_rule() {
                     Rule::r_node => elems.push(parse_res(node)),
                     Rule::v_node => elems.push(parse_vdd(node)),
+                    Rule::i_node => elems.push(parse_idd(node)),
                     _ => unreachable!(),
                 }
             }
@@ -70,6 +71,21 @@ fn parse_vdd(node: Pair<Rule>) -> device::SpiceElem {
     }
 }
 
+fn parse_idd(node: Pair<Rule>) -> device::SpiceElem {
+    let mut node_details = node.into_inner();
+    let name = node_details.next().unwrap().as_str();
+    let node_1 = node_details.next().unwrap().as_str();
+    let node_0 = node_details.next().unwrap().as_str();
+    let value = parse_value(node_details.next().unwrap().into_inner().next().unwrap());
+
+    device::SpiceElem {
+        dtype: device::DType::Idd,
+        name: String::from(name),
+        nodes: vec![String::from(node_0), String::from(node_1)],
+        value: value,
+    }
+}
+
 fn parse_value(value: Pair<Rule>) -> f64 {
     let mut value_details = value.into_inner();
 
@@ -107,11 +123,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_spice_file_generic() {
-        let elems = parse_spice_file("test/test.sp");
+    fn parse_spice_file_v_divider() {
+        let elems = parse_spice_file("test/v_divider.sp");
 
         assert_eq!(elems.len(), 3);
         assert!(matches!(elems[0].dtype, device::DType::Vdd));
+        assert!(matches!(elems[1].dtype, device::DType::Res));
+        assert!(matches!(elems[2].dtype, device::DType::Res));
+    }
+
+    #[test]
+    fn parse_spice_file_i_divider() {
+        let elems = parse_spice_file("test/i_divider.sp");
+
+        assert_eq!(elems.len(), 3);
+        assert!(matches!(elems[0].dtype, device::DType::Idd));
         assert!(matches!(elems[1].dtype, device::DType::Res));
         assert!(matches!(elems[2].dtype, device::DType::Res));
     }
