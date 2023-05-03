@@ -28,6 +28,7 @@ pub fn parse_spice_file(file: &str) -> Vec<device::SpiceElem> {
                     Rule::r_node => elems.push(parse_res(node)),
                     Rule::v_node => elems.push(parse_vdd(node)),
                     Rule::i_node => elems.push(parse_idd(node)),
+                    Rule::dio_node => elems.push(parse_dio(node)),
                     _ => unreachable!(),
                 }
             }
@@ -52,7 +53,7 @@ fn parse_res(node: Pair<Rule>) -> device::SpiceElem {
         dtype: device::DType::Res,
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
-        value: value,
+        value: Some(value),
     }
 }
 
@@ -67,7 +68,7 @@ fn parse_vdd(node: Pair<Rule>) -> device::SpiceElem {
         dtype: device::DType::Vdd,
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
-        value: value,
+        value: Some(value),
     }
 }
 
@@ -82,7 +83,21 @@ fn parse_idd(node: Pair<Rule>) -> device::SpiceElem {
         dtype: device::DType::Idd,
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
-        value: value,
+        value: Some(value),
+    }
+}
+
+fn parse_dio(node: Pair<Rule>) -> device::SpiceElem {
+    let mut node_details = node.into_inner();
+    let name = node_details.next().unwrap().as_str();
+    let node_1 = node_details.next().unwrap().as_str();
+    let node_0 = node_details.next().unwrap().as_str();
+
+    device::SpiceElem {
+        dtype: device::DType::Idd,
+        name: String::from(name),
+        nodes: vec![String::from(node_0), String::from(node_1)],
+        value: None, // Ignored for Diodes
     }
 }
 
@@ -153,7 +168,7 @@ mod tests {
         assert!(matches!(elem.dtype, device::DType::Res));
         assert_eq!(elem.name, "R1");
         assert_eq!(elem.nodes, ["1", "0"]);
-        assert_eq!(elem.value, 2.2e3);
+        assert_eq!(elem.value, Some(2.2e3));
     }
 
     #[test]
@@ -167,7 +182,7 @@ mod tests {
         assert!(matches!(elem.dtype, device::DType::Vdd));
         assert_eq!(elem.name, "V1");
         assert_eq!(elem.nodes, ["0", "1"]);
-        assert_eq!(elem.value, 4.0);
+        assert_eq!(elem.value, Some(4.0));
     }
 
     #[test]

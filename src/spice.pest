@@ -5,7 +5,7 @@ command =  { op_cmd }
 op_cmd = { ".op" }
 end_cmd = _{ ^".end" ~ NEWLINE? }
 
-node = { r_node | v_node | i_node }
+node = { r_node | v_node | i_node | dio_node }
 
 r_name = @{ ^"R" ~ name }
 r_node = { r_name ~ name ~ name ~ ^"R" ~ "=" ~ value }
@@ -17,6 +17,10 @@ v_node = { v_name ~ name ~ name ~ v_value }
 i_name = @{ ^"I" ~ name }
 i_value = @{ value ~ ^"A" }
 i_node = { i_name ~ name ~ name ~ i_value }
+
+dio_name = @{ ^"D" ~ name }
+model_name = { "d_model" }
+dio_node = { dio_name ~ name ~ name ~ model_name }
 
 name = @{ ASCII_ALPHANUMERIC+ }
 value = ${ number ~ prefix? }

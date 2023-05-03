@@ -15,7 +15,7 @@ pub struct SpiceElem {
     pub dtype: DType,
     pub name: String,
     pub nodes: Vec<String>,
-    pub value: f64,
+    pub value: Option<f64>,
 }
 
 impl SpiceElem {
@@ -29,7 +29,7 @@ impl SpiceElem {
                     .position(|x| x == &self.name)
                     .expect("Couldn't find matrix entry for source.");
 
-                b[is_idx] += self.value;
+                b[is_idx] += self.value.expect("Voltage source has no value");
 
                 if let Some(i) = vpos_idx {
                     a[is_idx][i] += 1.0;
@@ -44,16 +44,17 @@ impl SpiceElem {
             DType::Idd => {
                 let vneg_idx = nodes.iter().position(|x| x == &self.nodes[0]);
                 let vpos_idx = nodes.iter().position(|x| x == &self.nodes[1]);
+                let val = self.value.expect("Current source has no value");
 
                 if let Some(i) = vpos_idx {
-                    b[i] += self.value;
+                    b[i] += val;
                 }
                 if let Some(i) = vneg_idx {
-                    b[i] -= self.value;
+                    b[i] -= val;
                 }
             }
             DType::Res => {
-                let g = 1.0 / self.value;
+                let g = 1.0 / self.value.expect("Res has no value");
 
                 let vneg_idx = nodes.iter().position(|x| x == &self.nodes[0]);
                 let vpos_idx = nodes.iter().position(|x| x == &self.nodes[1]);
