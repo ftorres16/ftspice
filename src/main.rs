@@ -1,4 +1,5 @@
 use std::collections::BTreeSet;
+use std::env;
 
 extern crate pest;
 #[macro_use]
@@ -11,7 +12,11 @@ mod parser;
 const GND: &str = "0";
 
 fn main() {
-    let elems = parser::parse_spice_file("test/test.sp");
+    let args: Vec<String> = env::args().collect();
+
+    let file = &args[1];
+
+    let elems = parser::parse_spice_file(file);
 
     let nodes = find_nodes(&elems);
 
