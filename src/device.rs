@@ -26,7 +26,7 @@ impl SpiceElem {
                 let vpos_idx = nodes.iter().position(|x| x == &self.nodes[1]);
                 let is_idx = nodes
                     .iter()
-                    .position(|x| x.to_string() == self.name)
+                    .position(|x| x == &self.name)
                     .expect("Couldn't find matrix entry for source.");
 
                 b[is_idx] += self.value;
