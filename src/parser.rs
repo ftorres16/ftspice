@@ -97,7 +97,7 @@ fn parse_dio(node: Pair<Rule>) -> device::SpiceElem {
         dtype: device::DType::Idd,
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
-        value: None, // Ignored for Diodes
+        value: None,
     }
 }
 
