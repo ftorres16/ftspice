@@ -94,7 +94,7 @@ fn parse_dio(node: Pair<Rule>) -> device::SpiceElem {
     let node_0 = node_details.next().unwrap().as_str();
 
     device::SpiceElem {
-        dtype: device::DType::Idd,
+        dtype: device::DType::Diode,
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
         value: None,
@@ -183,6 +183,20 @@ mod tests {
         assert_eq!(elem.name, "V1");
         assert_eq!(elem.nodes, ["0", "1"]);
         assert_eq!(elem.value, Some(4.0));
+    }
+
+    #[test]
+    fn parse_dio_generic() {
+        let pair = SpiceParser::parse(Rule::dio_node, "D1 1 0 d_model")
+            .unwrap()
+            .next()
+            .unwrap();
+        let elem = parse_dio(pair);
+
+        assert!(matches!(elem.dtype, device::DType::Diode));
+        assert_eq!(elem.name, "D1");
+        assert_eq!(elem.nodes, ["0", "1"]);
+        assert_eq!(elem.value, None);
     }
 
     #[test]
