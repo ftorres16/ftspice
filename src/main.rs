@@ -8,6 +8,7 @@ extern crate pest_derive;
 mod device;
 mod gauss_lu;
 mod linalg;
+mod linear_stamp;
 mod newtons_method;
 mod parser;
 
@@ -34,7 +35,7 @@ fn main() {
     let mut g_vec: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
 
     for elem in elems.iter() {
-        elem.linear_stamp(&nodes, &mut a_mat, &mut b_vec);
+        linear_stamp::load(&elem, &nodes, &mut a_mat, &mut b_vec);
         elem.nonlinear_func(&nodes, &mut h_mat, &mut g_vec);
     }
 
