@@ -8,7 +8,10 @@ extern crate pest_derive;
 mod device;
 mod gauss_lu;
 mod linalg;
+mod linear_stamp;
 mod newtons_method;
+mod nonlinear_func;
+mod nonlinear_stamp;
 mod parser;
 
 const GND: &str = "0";
@@ -21,7 +24,7 @@ fn main() {
     let elems = parser::parse_spice_file(file);
 
     let nodes = find_nodes(&elems);
-    let num_nonlinear_funcs = elems.iter().map(|x| x.num_nonlinear_funcs()).sum();
+    let num_nonlinear_funcs = elems.iter().map(|x| nonlinear_func::count(x)).sum();
 
     let mut x_vec = vec![0.0; nodes.len()];
 
@@ -34,8 +37,8 @@ fn main() {
     let mut g_vec: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
 
     for elem in elems.iter() {
-        elem.linear_stamp(&nodes, &mut a_mat, &mut b_vec);
-        elem.nonlinear_func(&nodes, &mut h_mat, &mut g_vec);
+        linear_stamp::load(&elem, &nodes, &mut a_mat, &mut b_vec);
+        nonlinear_func::load(&elem, &nodes, &mut h_mat, &mut g_vec);
     }
 
     // gauss_lu::solve(&mut a_mat, &mut b_vec, &mut x_vec);
@@ -51,11 +54,11 @@ fn find_nodes(elems: &Vec<device::SpiceElem>) -> BTreeMap<String, device::NodeTy
 
     for elem in elems.iter() {
         for node in elem.nodes.iter() {
-            nodes.insert(node.to_string(), device::NodeType::G1);
+            nodes.insert(node.to_string(), device::NodeType::Voltage);
         }
 
         if let device::DType::Vdd = elem.dtype {
-            nodes.insert(elem.name.to_string(), device::NodeType::G2);
+            nodes.insert(elem.name.to_string(), device::NodeType::Current);
         }
     }
 
