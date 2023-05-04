@@ -173,13 +173,6 @@ mod tests {
         let err_vec = get_err_vec(&x, &a_mat, &b_vec, &h_mat, &g_vec);
 
         assert_eq!(err_vec, [0.0, 0.0]);
-
-        // let g_val = g_vec.iter().map(|g| g(x)).collect::<Vec<_>>();
-        // let h_times_g = linalg::mat_vec_prod(h_mat, &g_val);
-        // let a_times_x = linalg::mat_vec_prod(a_mat, x);
-        // let f = linalg::vec_add(&a_times_x, &h_times_g);
-
-        // linalg::vec_sub(&f, &b_vec)
     }
 
     #[test]
