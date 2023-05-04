@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-mod diode;
+pub mod diode;
 
 #[derive(Debug)]
 pub enum DType {
@@ -31,46 +31,6 @@ impl SpiceElem {
             DType::Idd => 0,
             DType::Res => 0,
             DType::Diode => 1,
-        }
-    }
-
-    pub fn nonlinear_func(
-        &self,
-        nodes: &BTreeMap<String, NodeType>,
-        h_mat: &mut Vec<Vec<f64>>,
-        g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
-    ) {
-        match self.dtype {
-            DType::Vdd => {}
-            DType::Idd => {}
-            DType::Res => {}
-            DType::Diode => {
-                let vpos_idx = nodes.keys().position(|x| x == &self.nodes[0]);
-                let vneg_idx = nodes.keys().position(|x| x == &self.nodes[1]);
-
-                if let Some(i) = vpos_idx {
-                    h_mat[i][g_vec.len()] = 1.0;
-                }
-                if let Some(i) = vneg_idx {
-                    h_mat[i][g_vec.len()] = -1.0;
-                }
-
-                g_vec.push(Box::new(move |x: &Vec<f64>| {
-                    let vpos = match vpos_idx {
-                        Some(i) => x[i],
-                        None => 0.0,
-                    };
-                    let vneg = match vneg_idx {
-                        Some(i) => x[i],
-                        None => 0.0,
-                    };
-                    let d = diode::Diode {
-                        vpos: vpos,
-                        vneg: vneg,
-                    };
-                    d.i()
-                }));
-            }
         }
     }
 

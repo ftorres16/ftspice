@@ -10,6 +10,7 @@ mod gauss_lu;
 mod linalg;
 mod linear_stamp;
 mod newtons_method;
+mod nonlinear_func;
 mod parser;
 
 const GND: &str = "0";
@@ -36,7 +37,7 @@ fn main() {
 
     for elem in elems.iter() {
         linear_stamp::load(&elem, &nodes, &mut a_mat, &mut b_vec);
-        elem.nonlinear_func(&nodes, &mut h_mat, &mut g_vec);
+        nonlinear_func::load(&elem, &nodes, &mut h_mat, &mut g_vec);
     }
 
     // gauss_lu::solve(&mut a_mat, &mut b_vec, &mut x_vec);
