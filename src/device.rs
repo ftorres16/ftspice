@@ -9,7 +9,7 @@ pub enum DType {
 }
 
 #[derive(Debug)]
-pub enum NodeType {
+pub enum RowType {
     Voltage,
     Current,
 }

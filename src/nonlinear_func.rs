@@ -13,7 +13,7 @@ pub fn count(elem: &device::SpiceElem) -> usize {
 
 pub fn load(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::NodeType>,
+    nodes: &BTreeMap<String, device::RowType>,
     h_mat: &mut Vec<Vec<f64>>,
     g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
 ) {

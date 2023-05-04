@@ -4,7 +4,7 @@ use crate::device;
 
 pub fn load(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::NodeType>,
+    nodes: &BTreeMap<String, device::RowType>,
     x: &Vec<f64>,
     a: &mut Vec<Vec<f64>>,
     b: &mut Vec<f64>,
@@ -19,7 +19,7 @@ pub fn load(
 
 fn load_diode(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::NodeType>,
+    nodes: &BTreeMap<String, device::RowType>,
     x: &Vec<f64>,
     a: &mut Vec<Vec<f64>>,
     b: &mut Vec<f64>,
