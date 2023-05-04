@@ -54,11 +54,11 @@ fn find_nodes(elems: &Vec<device::SpiceElem>) -> BTreeMap<String, device::NodeTy
 
     for elem in elems.iter() {
         for node in elem.nodes.iter() {
-            nodes.insert(node.to_string(), device::NodeType::G1);
+            nodes.insert(node.to_string(), device::NodeType::Voltage);
         }
 
         if let device::DType::Vdd = elem.dtype {
-            nodes.insert(elem.name.to_string(), device::NodeType::G2);
+            nodes.insert(elem.name.to_string(), device::NodeType::Current);
         }
     }
 

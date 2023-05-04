@@ -116,12 +116,12 @@ fn get_err_norm(nodes: &BTreeMap<String, device::NodeType>, err_vec: &Vec<f64>) 
 
     for (node_type, err_item) in nodes.values().zip(err_vec) {
         match node_type {
-            device::NodeType::G1 => {
+            device::NodeType::Voltage => {
                 if err_item.abs() > err.v {
                     err.v = err_item.abs();
                 }
             }
-            device::NodeType::G2 => {
+            device::NodeType::Current => {
                 if err_item.abs() > err.i {
                     err.i = err_item.abs();
                 }

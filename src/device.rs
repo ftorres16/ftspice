@@ -10,8 +10,8 @@ pub enum DType {
 
 #[derive(Debug)]
 pub enum NodeType {
-    G1,
-    G2,
+    Voltage,
+    Current,
 }
 
 #[derive(Debug)]
