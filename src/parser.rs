@@ -183,6 +183,19 @@ mod tests {
     }
 
     #[test]
+    fn parse_spice_filie_r_d_direct() {
+        let (elems, cmds) = parse_spice_file("test/r_d_direct.sp");
+
+        assert_eq!(elems.len(), 3);
+        assert!(matches!(elems[0].dtype, device::DType::Vdd));
+        assert!(matches!(elems[1].dtype, device::DType::Res));
+        assert!(matches!(elems[2].dtype, device::DType::Diode));
+
+        assert_eq!(cmds.len(), 1);
+        assert!(matches!(cmds[0].ctype, command::CmdType::Op));
+    }
+
+    #[test]
     fn parse_res_generic() {
         let pair = SpiceParser::parse(Rule::r_node, "R1 1 0 R=2.2k")
             .unwrap()
