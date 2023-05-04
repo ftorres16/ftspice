@@ -5,6 +5,7 @@ extern crate pest;
 #[macro_use]
 extern crate pest_derive;
 
+mod command;
 mod device;
 mod gauss_lu;
 mod linalg;
@@ -21,7 +22,7 @@ fn main() {
 
     let file = &args[1];
 
-    let elems = parser::parse_spice_file(file);
+    let (elems, _) = parser::parse_spice_file(file);
 
     let nodes = find_nodes(&elems);
     let num_nonlinear_funcs = elems.iter().map(|x| nonlinear_func::count(x)).sum();
