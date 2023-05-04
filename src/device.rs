@@ -35,9 +35,7 @@ impl SpiceElem {
             DType::Vdd => self.vdd_stamp(nodes, a, b),
             DType::Idd => self.idd_stamp(nodes, b),
             DType::Res => self.res_stamp(nodes, a),
-            DType::Diode => {
-                unimplemented!("Diodes not implemented yet!");
-            }
+            DType::Diode => (),
         };
     }
 

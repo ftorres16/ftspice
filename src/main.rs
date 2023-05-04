@@ -30,7 +30,7 @@ fn main() {
     let mut b_vec = vec![0.0; nodes.len()];
 
     // Nonlinear elements
-    let mut h_mat = vec![vec![0.0; nodes.len()]; num_nonlinear_funcs];
+    let mut h_mat = vec![vec![0.0; num_nonlinear_funcs]; nodes.len()];
     let mut g_vec: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
 
     for elem in elems.iter() {
