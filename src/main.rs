@@ -50,16 +50,16 @@ fn main() {
     }
 }
 
-fn find_nodes(elems: &Vec<device::SpiceElem>) -> BTreeMap<String, device::NodeType> {
-    let mut nodes: BTreeMap<String, device::NodeType> = BTreeMap::new();
+fn find_nodes(elems: &Vec<device::SpiceElem>) -> BTreeMap<String, device::RowType> {
+    let mut nodes: BTreeMap<String, device::RowType> = BTreeMap::new();
 
     for elem in elems.iter() {
         for node in elem.nodes.iter() {
-            nodes.insert(node.to_string(), device::NodeType::Voltage);
+            nodes.insert(node.to_string(), device::RowType::Voltage);
         }
 
         if let device::DType::Vdd = elem.dtype {
-            nodes.insert(elem.name.to_string(), device::NodeType::Current);
+            nodes.insert(elem.name.to_string(), device::RowType::Current);
         }
     }
 

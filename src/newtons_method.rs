@@ -26,7 +26,7 @@ struct Step {
 }
 
 pub fn solve(
-    nodes: &BTreeMap<String, device::NodeType>,
+    nodes: &BTreeMap<String, device::RowType>,
     elems: &Vec<device::SpiceElem>,
     x: &mut Vec<f64>,
     a_mat: &Vec<Vec<f64>>,
@@ -111,17 +111,17 @@ fn get_err_vec(
     linalg::vec_sub(&f, &b_vec)
 }
 
-fn get_err_norm(nodes: &BTreeMap<String, device::NodeType>, err_vec: &Vec<f64>) -> Err {
+fn get_err_norm(nodes: &BTreeMap<String, device::RowType>, err_vec: &Vec<f64>) -> Err {
     let mut err = Err { v: 0.0, i: 0.0 };
 
     for (node_type, err_item) in nodes.values().zip(err_vec) {
         match node_type {
-            device::NodeType::Voltage => {
+            device::RowType::Voltage => {
                 if err_item.abs() > err.v {
                     err.v = err_item.abs();
                 }
             }
-            device::NodeType::Current => {
+            device::RowType::Current => {
                 if err_item.abs() > err.i {
                     err.i = err_item.abs();
                 }
@@ -132,7 +132,7 @@ fn get_err_norm(nodes: &BTreeMap<String, device::NodeType>, err_vec: &Vec<f64>) 
     err
 }
 
-fn get_step_norm(nodes: &BTreeMap<String, device::NodeType>, step_vec: &Vec<f64>) -> Step {
+fn get_step_norm(nodes: &BTreeMap<String, device::RowType>, step_vec: &Vec<f64>) -> Step {
     let err = get_err_norm(nodes, step_vec);
     Step { v: err.v, i: err.i }
 }

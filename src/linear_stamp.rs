@@ -4,7 +4,7 @@ use crate::device;
 
 pub fn load(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::NodeType>,
+    nodes: &BTreeMap<String, device::RowType>,
     a: &mut Vec<Vec<f64>>,
     b: &mut Vec<f64>,
 ) {
@@ -18,7 +18,7 @@ pub fn load(
 
 fn load_vdd(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::NodeType>,
+    nodes: &BTreeMap<String, device::RowType>,
     a: &mut Vec<Vec<f64>>,
     b: &mut Vec<f64>,
 ) {
@@ -42,11 +42,7 @@ fn load_vdd(
     }
 }
 
-fn load_idd(
-    elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::NodeType>,
-    b: &mut Vec<f64>,
-) {
+fn load_idd(elem: &device::SpiceElem, nodes: &BTreeMap<String, device::RowType>, b: &mut Vec<f64>) {
     let vneg_idx = nodes.keys().position(|x| x == &elem.nodes[0]);
     let vpos_idx = nodes.keys().position(|x| x == &elem.nodes[1]);
     let val = elem.value.expect("Current source has no value");
@@ -61,7 +57,7 @@ fn load_idd(
 
 fn load_res(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::NodeType>,
+    nodes: &BTreeMap<String, device::RowType>,
     a: &mut Vec<Vec<f64>>,
 ) {
     let g = 1.0 / elem.value.expect("Res has no value");
