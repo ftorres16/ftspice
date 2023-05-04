@@ -14,6 +14,17 @@ const ABSOLUTE_TOLERANCE_A: f64 = 1e-6;
 const DAMPING_GAMMA: f64 = 1.3;
 const DAMPING_K: f64 = 16.0;
 
+#[derive(Debug)]
+struct Err {
+    v: f64,
+    i: f64,
+}
+#[derive(Debug)]
+struct Step {
+    v: f64,
+    i: f64,
+}
+
 pub fn solve(
     nodes: &BTreeMap<String, device::NodeType>,
     elems: &Vec<device::SpiceElem>,
@@ -23,24 +34,25 @@ pub fn solve(
     h_mat: &Vec<Vec<f64>>,
     g_vec: &Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
 ) -> i64 {
-    let mut v_err = f64::INFINITY;
-    let mut i_err = f64::INFINITY;
-    let mut v_step_size = f64::INFINITY;
-    let mut i_step_size = f64::INFINITY;
+    let mut err = Err {
+        v: f64::INFINITY,
+        i: f64::INFINITY,
+    };
+    let mut step = Step {
+        v: f64::INFINITY,
+        i: f64::INFINITY,
+    };
 
     let mut f0 = get_err_vec(x, a_mat, b_vec, h_mat, g_vec);
-    let (mut v_err_old, mut i_err_old) = get_err_norms(nodes, &f0);
-    let mut v_step_size_old = v_err_old;
-    let mut i_step_size_old = i_err_old;
+    let mut err_old = get_err_norm(nodes, &f0);
+    let mut step_old = Step {
+        v: err_old.v,
+        i: err_old.i,
+    };
 
     let mut n_iters = 0;
 
-    while n_iters < MAX_ITERS
-        && (v_step_size >= RELATIVE_TOLERANCE * v_step_size_old + ABSOLUTE_TOLERANCE_V
-            || i_step_size >= RELATIVE_TOLERANCE * i_step_size_old + ABSOLUTE_TOLERANCE_A
-            || v_err >= RELATIVE_TOLERANCE * v_err_old + ABSOLUTE_TOLERANCE_V
-            || i_err >= RELATIVE_TOLERANCE * i_err_old + ABSOLUTE_TOLERANCE_A)
-    {
+    while n_iters < MAX_ITERS && !convergence_condition(err, step, err_old, step_old) {
         let mut jf_mat = a_mat.clone();
         let mut b_temp = b_vec.clone();
         let mut x_proposed = x.clone();
@@ -53,14 +65,13 @@ pub fn solve(
 
         let step_proposed = linalg::vec_sub(&x_proposed, &x);
         let step_taken = dampen_step(&step_proposed);
-        (v_step_size, i_step_size) = get_err_norms(nodes, &step_taken);
+        step = get_step_norm(nodes, &step_taken);
 
         let x_new = linalg::vec_add(&x, &step_taken);
 
         f0 = get_err_vec(&x_new, a_mat, b_vec, h_mat, g_vec);
-        (v_err, i_err) = get_err_norms(nodes, &f0);
-
-        if v_err.is_infinite() || i_err.is_infinite() {
+        err = get_err_norm(nodes, &f0);
+        if err.v.is_infinite() || err.i.is_infinite() {
             panic!("v_err or i_err diverged");
         }
 
@@ -69,11 +80,11 @@ pub fn solve(
         }
 
         n_iters += 1;
-
-        v_err_old = v_err;
-        i_err_old = i_err;
-        v_step_size_old = v_step_size;
-        i_step_size_old = i_step_size;
+        err_old = Err { v: err.v, i: err.i };
+        step_old = Step {
+            v: step.v,
+            i: step.i,
+        };
     }
 
     n_iters
@@ -100,23 +111,35 @@ fn get_err_vec(
     linalg::vec_sub(&f, &b_vec)
 }
 
-fn get_err_norms(nodes: &BTreeMap<String, device::NodeType>, err_vec: &Vec<f64>) -> (f64, f64) {
-    let mut v_err = 0.0;
-    let mut i_err = 0.0;
+fn get_err_norm(nodes: &BTreeMap<String, device::NodeType>, err_vec: &Vec<f64>) -> Err {
+    let mut err = Err { v: 0.0, i: 0.0 };
 
-    for (node_type, err) in nodes.values().zip(err_vec) {
+    for (node_type, err_item) in nodes.values().zip(err_vec) {
         match node_type {
             device::NodeType::G1 => {
-                if err.abs() > v_err {
-                    v_err = err.abs();
+                if err_item.abs() > err.v {
+                    err.v = err_item.abs();
                 }
             }
             device::NodeType::G2 => {
-                if err.abs() > i_err {
-                    i_err = err.abs();
+                if err_item.abs() > err.i {
+                    err.i = err_item.abs();
                 }
             }
         }
     }
-    (v_err, i_err)
+
+    err
+}
+
+fn get_step_norm(nodes: &BTreeMap<String, device::NodeType>, step_vec: &Vec<f64>) -> Step {
+    let err = get_err_norm(nodes, step_vec);
+    Step { v: err.v, i: err.i }
+}
+
+fn convergence_condition(err: Err, step: Step, err_old: Err, step_old: Step) -> bool {
+    step.v < RELATIVE_TOLERANCE * step_old.v + ABSOLUTE_TOLERANCE_V
+        && step.i < RELATIVE_TOLERANCE * step_old.i + ABSOLUTE_TOLERANCE_A
+        && err.v < RELATIVE_TOLERANCE * err_old.v + ABSOLUTE_TOLERANCE_V
+        && err.i < RELATIVE_TOLERANCE * err_old.i + ABSOLUTE_TOLERANCE_A
 }
