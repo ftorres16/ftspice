@@ -76,3 +76,174 @@ fn load_res(
         a[j][i] -= g;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_load_vdd_node_0_gnd() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::Vdd,
+            name: String::from("V1"),
+            nodes: vec![String::from("0"), String::from("1")],
+            value: Some(1e-3),
+        };
+        let nodes = BTreeMap::from([
+            (String::from("1"), device::RowType::Voltage),
+            (String::from("V1"), device::RowType::Current),
+        ]);
+        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
+        let mut b: Vec<f64> = vec![0.0; 2];
+
+        load_vdd(&elem, &nodes, &mut a, &mut b);
+
+        assert_eq!(a, [[0.0, 1.0], [1.0, 0.0]]);
+        assert_eq!(b, [0.0, 1e-3]);
+    }
+
+    #[test]
+    fn test_load_vdd_node_1_gnd() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::Vdd,
+            name: String::from("V1"),
+            nodes: vec![String::from("1"), String::from("0")],
+            value: Some(1e-3),
+        };
+        let nodes = BTreeMap::from([
+            (String::from("1"), device::RowType::Voltage),
+            (String::from("V1"), device::RowType::Current),
+        ]);
+        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
+        let mut b: Vec<f64> = vec![0.0; 2];
+
+        load_vdd(&elem, &nodes, &mut a, &mut b);
+
+        assert_eq!(a, [[0.0, -1.0], [-1.0, 0.0]]);
+        assert_eq!(b, [0.0, 1e-3]);
+    }
+
+    #[test]
+    fn test_load_vdd_to_nodes() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::Vdd,
+            name: String::from("V1"),
+            nodes: vec![String::from("1"), String::from("2")],
+            value: Some(1e-3),
+        };
+        let nodes = BTreeMap::from([
+            (String::from("1"), device::RowType::Voltage),
+            (String::from("2"), device::RowType::Voltage),
+            (String::from("V1"), device::RowType::Current),
+        ]);
+        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
+        let mut b: Vec<f64> = vec![0.0; 3];
+
+        load_vdd(&elem, &nodes, &mut a, &mut b);
+
+        assert_eq!(a, [[0.0, 0.0, -1.0], [0.0, 0.0, 1.0], [-1.0, 1.0, 0.0]]);
+        assert_eq!(b, [0.0, 0.0, 1e-3]);
+    }
+
+    #[test]
+    fn test_load_idd_node_0_gnd() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::Idd,
+            name: String::from("I1"),
+            nodes: vec![String::from("1"), String::from("0")],
+            value: Some(1e-3),
+        };
+        let nodes = BTreeMap::from([(String::from("1"), device::RowType::Voltage)]);
+        let mut b: Vec<f64> = vec![0.0; 1];
+
+        load_idd(&elem, &nodes, &mut b);
+
+        assert_eq!(b, [-1e-3]);
+    }
+
+    #[test]
+    fn test_load_idd_node_1_gnd() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::Idd,
+            name: String::from("I1"),
+            nodes: vec![String::from("0"), String::from("1")],
+            value: Some(1e-3),
+        };
+        let nodes = BTreeMap::from([(String::from("1"), device::RowType::Voltage)]);
+        let mut b: Vec<f64> = vec![0.0; 1];
+
+        load_idd(&elem, &nodes, &mut b);
+
+        assert_eq!(b, [1e-3]);
+    }
+
+    #[test]
+    fn test_load_idd_to_nodes() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::Idd,
+            name: String::from("I1"),
+            nodes: vec![String::from("1"), String::from("2")],
+            value: Some(1e-3),
+        };
+        let nodes = BTreeMap::from([
+            (String::from("1"), device::RowType::Voltage),
+            (String::from("2"), device::RowType::Voltage),
+        ]);
+        let mut b: Vec<f64> = vec![0.0; 2];
+
+        load_idd(&elem, &nodes, &mut b);
+
+        assert_eq!(b, [-1e-3, 1e-3]);
+    }
+
+    #[test]
+    fn test_load_res_node_0_gnd() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::Res,
+            name: String::from("R1"),
+            nodes: vec![String::from("0"), String::from("1")],
+            value: Some(1e3),
+        };
+        let nodes = BTreeMap::from([(String::from("1"), device::RowType::Voltage)]);
+        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 1]];
+
+        load_res(&elem, &nodes, &mut a);
+
+        assert_eq!(a, [[1e-3]]);
+    }
+
+    #[test]
+    fn test_load_res_node_1_gnd() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::Res,
+            name: String::from("R1"),
+            nodes: vec![String::from("1"), String::from("0")],
+            value: Some(1e3),
+        };
+        let nodes = BTreeMap::from([(String::from("1"), device::RowType::Voltage)]);
+        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 1]];
+
+        load_res(&elem, &nodes, &mut a);
+
+        assert_eq!(a, [[1e-3]]);
+    }
+
+    #[test]
+    fn test_load_res_to_nodes() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::Res,
+            name: String::from("R1"),
+            nodes: vec![String::from("1"), String::from("2")],
+            value: Some(1e3),
+        };
+        let nodes = BTreeMap::from([
+            (String::from("1"), device::RowType::Voltage),
+            (String::from("2"), device::RowType::Voltage),
+        ]);
+        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
+
+        load_res(&elem, &nodes, &mut a);
+
+        assert_eq!(a, [[1e-3, -1e-3], [-1e-3, 1e-3]]);
+    }
+}
