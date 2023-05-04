@@ -150,6 +150,16 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_dampen_step() {
+        let step = vec![1.0, 2.0, 3.0];
+        let small_step = dampen_step(&step);
+
+        for (old, new) in step.iter().zip(&small_step) {
+            assert!(old > new);
+        }
+    }
+
+    #[test]
     fn test_get_err_vec() {
         let x: Vec<f64> = vec![1.0, 2.0];
         let a_mat: Vec<Vec<f64>> = vec![vec![1.0, 2.0], vec![3.0, 4.0]];
