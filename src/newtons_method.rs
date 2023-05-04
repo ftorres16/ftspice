@@ -52,7 +52,7 @@ pub fn solve(
 
     let mut n_iters = 0;
 
-    while n_iters < MAX_ITERS && !convergence_condition(err, step, err_old, step_old) {
+    while n_iters < MAX_ITERS && !converged(&err, &step, &err_old, &step_old) {
         let mut jf_mat = a_mat.clone();
         let mut b_temp = b_vec.clone();
         let mut x_proposed = x.clone();
@@ -112,6 +112,7 @@ fn get_err_vec(
 }
 
 fn get_err_norm(nodes: &BTreeMap<String, device::RowType>, err_vec: &Vec<f64>) -> Err {
+    // Use infinity norm
     let mut err = Err { v: 0.0, i: 0.0 };
 
     for (node_type, err_item) in nodes.values().zip(err_vec) {
@@ -137,9 +138,117 @@ fn get_step_norm(nodes: &BTreeMap<String, device::RowType>, step_vec: &Vec<f64>)
     Step { v: err.v, i: err.i }
 }
 
-fn convergence_condition(err: Err, step: Step, err_old: Err, step_old: Step) -> bool {
+fn converged(err: &Err, step: &Step, err_old: &Err, step_old: &Step) -> bool {
     step.v < RELATIVE_TOLERANCE * step_old.v + ABSOLUTE_TOLERANCE_V
         && step.i < RELATIVE_TOLERANCE * step_old.i + ABSOLUTE_TOLERANCE_A
         && err.v < RELATIVE_TOLERANCE * err_old.v + ABSOLUTE_TOLERANCE_V
         && err.i < RELATIVE_TOLERANCE * err_old.i + ABSOLUTE_TOLERANCE_A
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_err_vec() {
+        let x: Vec<f64> = vec![1.0, 2.0];
+        let a_mat: Vec<Vec<f64>> = vec![vec![1.0, 2.0], vec![3.0, 4.0]];
+        let b_vec: Vec<f64> = vec![8.0, 12.5];
+        let h_mat: Vec<Vec<f64>> = vec![vec![1.0, 0.0], vec![0.0, 1.0]];
+        let g_vec: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = vec![
+            Box::new(|x: &Vec<f64>| x.iter().sum()),
+            Box::new(|x: &Vec<f64>| x.iter().sum::<f64>() / x.len() as f64),
+        ];
+
+        let err_vec = get_err_vec(&x, &a_mat, &b_vec, &h_mat, &g_vec);
+
+        assert_eq!(err_vec, [0.0, 0.0]);
+
+        // let g_val = g_vec.iter().map(|g| g(x)).collect::<Vec<_>>();
+        // let h_times_g = linalg::mat_vec_prod(h_mat, &g_val);
+        // let a_times_x = linalg::mat_vec_prod(a_mat, x);
+        // let f = linalg::vec_add(&a_times_x, &h_times_g);
+
+        // linalg::vec_sub(&f, &b_vec)
+    }
+
+    #[test]
+    fn test_get_err_norm() {
+        let nodes: BTreeMap<String, device::RowType> = BTreeMap::from([
+            (String::from("1"), device::RowType::Voltage),
+            (String::from("2"), device::RowType::Voltage),
+            (String::from("3"), device::RowType::Current),
+        ]);
+        let err_vec: Vec<f64> = vec![1.0, 1.0, 2.0];
+
+        let err = get_err_norm(&nodes, &err_vec);
+
+        assert_eq!(err.v, 1.0);
+        assert_eq!(err.i, 2.0);
+    }
+
+    #[test]
+    fn test_get_step_norm() {
+        let nodes: BTreeMap<String, device::RowType> = BTreeMap::from([
+            (String::from("1"), device::RowType::Voltage),
+            (String::from("2"), device::RowType::Voltage),
+            (String::from("3"), device::RowType::Current),
+        ]);
+        let step_vec: Vec<f64> = vec![1.0, 1.0, 2.0];
+
+        let step = get_step_norm(&nodes, &step_vec);
+
+        assert_eq!(step.v, 1.0);
+        assert_eq!(step.i, 2.0);
+    }
+
+    #[test]
+    fn test_converged_success() {
+        let err = Err { v: 1e-9, i: 1e-9 };
+        let step = Step { v: 1e-9, i: 1e-9 };
+        let err_old = Err { v: 1.0, i: 1.0 };
+        let step_old = Step { v: 1.0, i: 1.0 };
+
+        assert!(converged(&err, &step, &err_old, &step_old));
+    }
+
+    #[test]
+    fn test_converged_fail_err_v() {
+        let err = Err { v: 1.0, i: 1e-9 };
+        let step = Step { v: 1e-9, i: 1e-9 };
+        let err_old = Err { v: 1.0, i: 1.0 };
+        let step_old = Step { v: 1.0, i: 1.0 };
+
+        assert!(!converged(&err, &step, &err_old, &step_old));
+    }
+
+    #[test]
+    fn test_converged_fail_err_i() {
+        let err = Err { v: 1e-9, i: 1.0 };
+        let step = Step { v: 1e-9, i: 1e-9 };
+        let err_old = Err { v: 1.0, i: 1.0 };
+        let step_old = Step { v: 1.0, i: 1.0 };
+
+        assert!(!converged(&err, &step, &err_old, &step_old));
+    }
+
+    #[test]
+    fn test_converged_fail_step_v() {
+        let err = Err { v: 1e-9, i: 1e-9 };
+        let step = Step { v: 1.0, i: 1e-9 };
+        let err_old = Err { v: 1.0, i: 1.0 };
+        let step_old = Step { v: 1.0, i: 1.0 };
+
+        assert!(!converged(&err, &step, &err_old, &step_old));
+    }
+
+    #[test]
+    fn test_converged_fail_step_i() {
+        let err = Err { v: 1e-9, i: 1e-9 };
+        let step = Step { v: 1e-9, i: 1.0 };
+        let err_old = Err { v: 1.0, i: 1.0 };
+        let step_old = Step { v: 1.0, i: 1.0 };
+
+        assert!(!converged(&err, &step, &err_old, &step_old));
+    }
 }
