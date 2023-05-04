@@ -2,6 +2,15 @@ use std::collections::BTreeMap;
 
 use crate::device;
 
+pub fn count(elem: &device::SpiceElem) -> usize {
+    match elem.dtype {
+        device::DType::Vdd => 0,
+        device::DType::Idd => 0,
+        device::DType::Res => 0,
+        device::DType::Diode => 1,
+    }
+}
+
 pub fn load(
     elem: &device::SpiceElem,
     nodes: &BTreeMap<String, device::NodeType>,

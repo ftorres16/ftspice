@@ -11,6 +11,7 @@ mod linalg;
 mod linear_stamp;
 mod newtons_method;
 mod nonlinear_func;
+mod nonlinear_stamp;
 mod parser;
 
 const GND: &str = "0";
@@ -23,7 +24,7 @@ fn main() {
     let elems = parser::parse_spice_file(file);
 
     let nodes = find_nodes(&elems);
-    let num_nonlinear_funcs = elems.iter().map(|x| x.num_nonlinear_funcs()).sum();
+    let num_nonlinear_funcs = elems.iter().map(|x| nonlinear_func::count(x)).sum();
 
     let mut x_vec = vec![0.0; nodes.len()];
 

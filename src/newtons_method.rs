@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use crate::device;
 use crate::gauss_lu;
 use crate::linalg;
+use crate::nonlinear_stamp;
 
 const MAX_ITERS: i64 = 100;
 
@@ -45,7 +46,7 @@ pub fn solve(
         let mut x_proposed = x.clone();
 
         for elem in elems.iter() {
-            elem.taylor_stamp(nodes, &x_proposed, &mut jf_mat, &mut b_temp);
+            nonlinear_stamp::load(&elem, nodes, &x_proposed, &mut jf_mat, &mut b_temp);
         }
 
         gauss_lu::solve(&mut jf_mat, &mut b_temp, &mut x_proposed);
