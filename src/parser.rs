@@ -32,6 +32,7 @@ pub fn parse_spice_file(file: &str) -> (Vec<device::SpiceElem>, Vec<command::Com
                     Rule::v_node => elems.push(parse_vdd(node)),
                     Rule::i_node => elems.push(parse_idd(node)),
                     Rule::dio_node => elems.push(parse_dio(node)),
+                    Rule::bjt_node => elems.push(parse_bjt(node)),
                     _ => unreachable!(),
                 }
             }
@@ -108,6 +109,25 @@ fn parse_dio(node: Pair<Rule>) -> device::SpiceElem {
         dtype: device::DType::Diode,
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
+        value: None,
+    }
+}
+
+fn parse_bjt(node: Pair<Rule>) -> device::SpiceElem {
+    let mut node_details = node.into_inner();
+    let name = node_details.next().unwrap().as_str();
+    let node_0 = node_details.next().unwrap().as_str();
+    let node_1 = node_details.next().unwrap().as_str();
+    let node_2 = node_details.next().unwrap().as_str();
+
+    device::SpiceElem {
+        dtype: device::DType::NPN,
+        name: String::from(name),
+        nodes: vec![
+            String::from(node_0),
+            String::from(node_1),
+            String::from(node_2),
+        ],
         value: None,
     }
 }
@@ -196,6 +216,21 @@ mod tests {
     }
 
     #[test]
+    fn parse_spice_file_npn_test() {
+        let (elems, cmds) = parse_spice_file("test/npn_test.sp");
+
+        assert_eq!(elems.len(), 5);
+        assert!(matches!(elems[0].dtype, device::DType::Vdd));
+        assert!(matches!(elems[1].dtype, device::DType::Vdd));
+        assert!(matches!(elems[2].dtype, device::DType::Res));
+        assert!(matches!(elems[3].dtype, device::DType::Res));
+        assert!(matches!(elems[4].dtype, device::DType::NPN));
+
+        assert_eq!(cmds.len(), 1);
+        assert!(matches!(cmds[0].ctype, command::CmdType::Op));
+    }
+
+    #[test]
     fn parse_res_generic() {
         let pair = SpiceParser::parse(Rule::r_node, "R1 1 0 R=2.2k")
             .unwrap()
@@ -234,6 +269,20 @@ mod tests {
         assert!(matches!(elem.dtype, device::DType::Diode));
         assert_eq!(elem.name, "D1");
         assert_eq!(elem.nodes, ["0", "1"]);
+        assert_eq!(elem.value, None);
+    }
+
+    #[test]
+    fn parse_bjt_generic() {
+        let pair = SpiceParser::parse(Rule::bjt_node, "Q1 1 2 3 0 q_model")
+            .unwrap()
+            .next()
+            .unwrap();
+        let elem = parse_bjt(pair);
+
+        assert!(matches!(elem.dtype, device::DType::NPN));
+        assert_eq!(elem.name, "Q1");
+        assert_eq!(elem.nodes, ["1", "2", "3"]);
         assert_eq!(elem.value, None);
     }
 

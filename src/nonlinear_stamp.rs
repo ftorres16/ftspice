@@ -14,6 +14,7 @@ pub fn load(
         device::DType::Idd => {}
         device::DType::Res => {}
         device::DType::Diode => load_diode(elem, nodes, x, a, b),
+        device::DType::NPN => load_npn(elem, nodes, x, a, b),
     }
 }
 
@@ -54,6 +55,69 @@ fn load_diode(
     if let (Some(i), Some(j)) = (vpos_idx, vneg_idx) {
         a[i][j] -= g_eq;
         a[j][i] -= g_eq;
+    }
+}
+
+fn load_npn(
+    elem: &device::SpiceElem,
+    nodes: &BTreeMap<String, device::RowType>,
+    x: &Vec<f64>,
+    a: &mut Vec<Vec<f64>>,
+    b: &mut Vec<f64>,
+) {
+    let vc_idx = nodes.keys().position(|x| x == &elem.nodes[0]);
+    let vb_idx = nodes.keys().position(|x| x == &elem.nodes[1]);
+    let ve_idx = nodes.keys().position(|x| x == &elem.nodes[2]);
+
+    let vc = match vc_idx {
+        Some(i) => x[i],
+        None => 0.0,
+    };
+    let vb = match vb_idx {
+        Some(i) => x[i],
+        None => 0.0,
+    };
+    let ve = match ve_idx {
+        Some(i) => x[i],
+        None => 0.0,
+    };
+
+    let q = device::npn::NPN {
+        vc: vc,
+        vb: vb,
+        ve: ve,
+    };
+
+    let gee = q.gee();
+    let gec = q.gec();
+    let gce = q.gce();
+    let gcc = q.gcc();
+    let i_e = q.ie_eq();
+    let i_c = q.ic_eq();
+
+    if let Some(i) = vc_idx {
+        a[i][i] += gcc;
+        b[i] -= i_c;
+    }
+    if let Some(i) = vb_idx {
+        a[i][i] += gcc + gee - gce - gec;
+        b[i] += i_e + i_c;
+    }
+    if let Some(i) = ve_idx {
+        a[i][i] += gee;
+        b[i] -= i_e;
+    }
+    if let (Some(i), Some(j)) = (ve_idx, vc_idx) {
+        a[i][j] -= gec;
+        a[j][i] -= gce;
+    }
+    if let (Some(i), Some(j)) = (ve_idx, vb_idx) {
+        a[i][j] += gec - gee;
+        a[j][i] += gce - gee;
+    }
+    if let (Some(i), Some(j)) = (vc_idx, vb_idx) {
+        a[i][j] += gce - gcc;
+        a[j][i] += gec - gcc;
     }
 }
 
@@ -123,5 +187,33 @@ mod tests {
         assert!(a[1][1] > 0.0);
         assert!(b[0] > 0.0);
         assert!(b[1] < 0.0);
+    }
+
+    #[test]
+    fn test_load_npn_three_nodes() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::NPN,
+            name: String::from("Q1"),
+            nodes: vec![String::from("1"), String::from("2"), String::from("3")],
+            value: None,
+        };
+        let nodes = BTreeMap::from([
+            (String::from("1"), device::RowType::Voltage),
+            (String::from("2"), device::RowType::Voltage),
+            (String::from("3"), device::RowType::Voltage),
+        ]);
+        let x: Vec<f64> = vec![2.0, 1.0, 0.0];
+        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
+        let mut b: Vec<f64> = vec![0.0; 3];
+
+        load_npn(&elem, &nodes, &x, &mut a, &mut b);
+
+        assert!(a[0][0] > 0.0);
+        assert!(a[1][1] > 0.0);
+        assert!(a[2][2] > 0.0);
+        println!("{:?}", b);
+        assert!(b[0] > 0.0);
+        assert!(b[1] > 0.0);
+        assert!(b[2] < 0.0);
     }
 }

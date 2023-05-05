@@ -1,4 +1,5 @@
 pub mod diode;
+pub mod npn;
 
 #[derive(Debug)]
 pub enum DType {
@@ -6,6 +7,7 @@ pub enum DType {
     Idd,
     Res,
     Diode,
+    NPN,
 }
 
 #[derive(Debug)]
