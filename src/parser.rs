@@ -33,6 +33,7 @@ pub fn parse_spice_file(file: &str) -> (Vec<device::SpiceElem>, Vec<command::Com
                     Rule::i_node => elems.push(parse_idd(node)),
                     Rule::dio_node => elems.push(parse_dio(node)),
                     Rule::bjt_node => elems.push(parse_bjt(node)),
+                    Rule::mos_node => elems.push(parse_mos(node)),
                     _ => unreachable!(),
                 }
             }
@@ -122,6 +123,26 @@ fn parse_bjt(node: Pair<Rule>) -> device::SpiceElem {
 
     device::SpiceElem {
         dtype: device::DType::NPN,
+        name: String::from(name),
+        nodes: vec![
+            String::from(node_0),
+            String::from(node_1),
+            String::from(node_2),
+        ],
+        value: None,
+    }
+}
+
+fn parse_mos(node: Pair<Rule>) -> device::SpiceElem {
+    let mut node_details = node.into_inner();
+
+    let name = node_details.next().unwrap().as_str();
+    let node_0 = node_details.next().unwrap().as_str();
+    let node_1 = node_details.next().unwrap().as_str();
+    let node_2 = node_details.next().unwrap().as_str();
+
+    device::SpiceElem {
+        dtype: device::DType::NMOS,
         name: String::from(name),
         nodes: vec![
             String::from(node_0),
@@ -231,6 +252,20 @@ mod tests {
     }
 
     #[test]
+    fn parse_spice_file_nmos_test() {
+        let (elems, cmds) = parse_spice_file("test/nmos_test.sp");
+
+        assert_eq!(elems.len(), 4);
+        assert!(matches!(elems[0].dtype, device::DType::Vdd));
+        assert!(matches!(elems[1].dtype, device::DType::Vdd));
+        assert!(matches!(elems[2].dtype, device::DType::Res));
+        assert!(matches!(elems[3].dtype, device::DType::NMOS));
+
+        assert_eq!(cmds.len(), 1);
+        assert!(matches!(cmds[0].ctype, command::CmdType::Op));
+    }
+
+    #[test]
     fn parse_res_generic() {
         let pair = SpiceParser::parse(Rule::r_node, "R1 1 0 R=2.2k")
             .unwrap()
@@ -282,6 +317,20 @@ mod tests {
 
         assert!(matches!(elem.dtype, device::DType::NPN));
         assert_eq!(elem.name, "Q1");
+        assert_eq!(elem.nodes, ["1", "2", "3"]);
+        assert_eq!(elem.value, None);
+    }
+
+    #[test]
+    fn parse_nmos_generic() {
+        let pair = SpiceParser::parse(Rule::mos_node, "M1 1 2 3 0 t_model")
+            .unwrap()
+            .next()
+            .unwrap();
+        let elem = parse_mos(pair);
+
+        assert!(matches!(elem.dtype, device::DType::NMOS));
+        assert_eq!(elem.name, "M1");
         assert_eq!(elem.nodes, ["1", "2", "3"]);
         assert_eq!(elem.value, None);
     }
