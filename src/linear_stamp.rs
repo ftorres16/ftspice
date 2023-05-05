@@ -14,6 +14,7 @@ pub fn load(
         device::DType::Res => load_res(elem, nodes, a),
         device::DType::Diode => (),
         device::DType::NPN => (),
+        device::DType::NMOS => (),
     };
 }
 

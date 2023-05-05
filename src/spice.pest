@@ -5,7 +5,7 @@ command =  { op_cmd }
 op_cmd = { ^".op" }
 end_cmd = _{ ^".end" ~ NEWLINE? }
 
-node = { r_node | v_node | i_node | dio_node | bjt_node}
+node = { r_node | v_node | i_node | dio_node | bjt_node | mos_node }
 
 r_name = @{ ^"R" ~ name }
 r_node = { r_name ~ name ~ name ~ ^"R" ~ "=" ~ value }
@@ -25,6 +25,10 @@ dio_node = { dio_name ~ name ~ name ~ dio_model_name }
 bjt_name = @{ ^"Q" ~ name }
 bjt_model_name = { "q_model" }
 bjt_node = { bjt_name ~ name ~ name ~ name ~ name ~ bjt_model_name }
+
+mos_name = @{ ^"M" ~ name }
+mos_model_name = { "t_model" }
+mos_node = { mos_name ~ name ~ name ~ name ~ name ~ mos_model_name }
 
 name = @{ ASCII_ALPHANUMERIC+ }
 value = ${ number ~ prefix? }
