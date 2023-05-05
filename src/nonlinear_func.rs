@@ -21,32 +21,110 @@ pub fn load(
         device::DType::Vdd => {}
         device::DType::Idd => {}
         device::DType::Res => {}
-        device::DType::Diode => {
-            let vpos_idx = nodes.keys().position(|x| x == &elem.nodes[0]);
-            let vneg_idx = nodes.keys().position(|x| x == &elem.nodes[1]);
+        device::DType::Diode => load_diode(elem, nodes, h_mat, g_vec),
+    }
+}
 
-            if let Some(i) = vpos_idx {
-                h_mat[i][g_vec.len()] = 1.0;
-            }
-            if let Some(i) = vneg_idx {
-                h_mat[i][g_vec.len()] = -1.0;
-            }
+fn load_diode(
+    elem: &device::SpiceElem,
+    nodes: &BTreeMap<String, device::RowType>,
+    h_mat: &mut Vec<Vec<f64>>,
+    g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
+) {
+    let vpos_idx = nodes.keys().position(|x| x == &elem.nodes[0]);
+    let vneg_idx = nodes.keys().position(|x| x == &elem.nodes[1]);
 
-            g_vec.push(Box::new(move |x: &Vec<f64>| {
-                let vpos = match vpos_idx {
-                    Some(i) => x[i],
-                    None => 0.0,
-                };
-                let vneg = match vneg_idx {
-                    Some(i) => x[i],
-                    None => 0.0,
-                };
-                let d = device::diode::Diode {
-                    vpos: vpos,
-                    vneg: vneg,
-                };
-                d.i()
-            }));
-        }
+    if let Some(i) = vpos_idx {
+        h_mat[i][g_vec.len()] = 1.0;
+    }
+    if let Some(i) = vneg_idx {
+        h_mat[i][g_vec.len()] = -1.0;
+    }
+
+    g_vec.push(Box::new(move |x: &Vec<f64>| {
+        let vpos = match vpos_idx {
+            Some(i) => x[i],
+            None => 0.0,
+        };
+        let vneg = match vneg_idx {
+            Some(i) => x[i],
+            None => 0.0,
+        };
+        let d = device::diode::Diode {
+            vpos: vpos,
+            vneg: vneg,
+        };
+        d.i()
+    }));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_load_diode_node_0_gnd() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::Diode,
+            name: String::from("D1"),
+            nodes: vec![String::from("0"), String::from("1")],
+            value: None,
+        };
+        let nodes = BTreeMap::from([(String::from("1"), device::RowType::Voltage)]);
+        let mut h: Vec<Vec<f64>> = vec![vec![0.0; 1]; 1];
+        let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
+
+        load_diode(&elem, &nodes, &mut h, &mut g);
+
+        assert_eq!(h, [[-1.0]]);
+        assert_eq!(g.len(), 1);
+
+        let x_test: Vec<f64> = vec![1.5, 1.0];
+        assert!(g[0](&x_test) < 0.0);
+    }
+
+    #[test]
+    fn test_load_diode_node_1_gnd() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::Diode,
+            name: String::from("D1"),
+            nodes: vec![String::from("1"), String::from("0")],
+            value: None,
+        };
+        let nodes = BTreeMap::from([(String::from("1"), device::RowType::Voltage)]);
+        let mut h: Vec<Vec<f64>> = vec![vec![0.0; 1]; 1];
+        let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
+
+        load_diode(&elem, &nodes, &mut h, &mut g);
+
+        assert_eq!(h, [[1.0]]);
+        assert_eq!(g.len(), 1);
+
+        let x_test: Vec<f64> = vec![1.5, 1.0];
+        assert!(g[0](&x_test) > 0.0);
+    }
+
+    #[test]
+    fn test_load_diode_two_nodes() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::Diode,
+            name: String::from("D1"),
+            nodes: vec![String::from("1"), String::from("2")],
+            value: None,
+        };
+        let nodes = BTreeMap::from([
+            (String::from("1"), device::RowType::Voltage),
+            (String::from("2"), device::RowType::Voltage),
+        ]);
+        let mut h: Vec<Vec<f64>> = vec![vec![0.0; 1]; 2];
+        let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
+
+        load_diode(&elem, &nodes, &mut h, &mut g);
+
+        assert_eq!(h, [[1.0], [-1.0]]);
+        assert_eq!(g.len(), 1);
+
+        let x_test: Vec<f64> = vec![1.5, 1.0];
+        assert!(g[0](&x_test) > 0.0);
     }
 }
