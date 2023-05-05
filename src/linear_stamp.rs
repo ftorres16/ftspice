@@ -13,6 +13,7 @@ pub fn load(
         device::DType::Idd => load_idd(elem, nodes, b),
         device::DType::Res => load_res(elem, nodes, a),
         device::DType::Diode => (),
+        device::DType::NPN => (),
     };
 }
 

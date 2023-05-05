@@ -45,7 +45,9 @@ fn main() {
     }
 
     // gauss_lu::solve(&mut a_mat, &mut b_vec, &mut x_vec);
-    newtons_method::solve(&nodes, &elems, &mut x_vec, &a_mat, &b_vec, &h_mat, &g_vec);
+    let n_iters = newtons_method::solve(&nodes, &elems, &mut x_vec, &a_mat, &b_vec, &h_mat, &g_vec);
+
+    println!("n_iters={}", n_iters);
 
     for ((node, type_), val) in nodes.iter().zip(x_vec.iter()) {
         println!("{node} ({type_:?}): {val}");

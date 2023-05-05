@@ -8,6 +8,7 @@ pub fn count(elem: &device::SpiceElem) -> usize {
         device::DType::Idd => 0,
         device::DType::Res => 0,
         device::DType::Diode => 1,
+        device::DType::NPN => 3,
     }
 }
 
@@ -22,6 +23,7 @@ pub fn load(
         device::DType::Idd => {}
         device::DType::Res => {}
         device::DType::Diode => load_diode(elem, nodes, h_mat, g_vec),
+        device::DType::NPN => load_npn(elem, nodes, h_mat, g_vec),
     }
 }
 
@@ -55,6 +57,91 @@ fn load_diode(
             vneg: vneg,
         };
         d.i()
+    }));
+}
+
+fn load_npn(
+    elem: &device::SpiceElem,
+    nodes: &BTreeMap<String, device::RowType>,
+    h_mat: &mut Vec<Vec<f64>>,
+    g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
+) {
+    let vc_idx = nodes.keys().position(|x| x == &elem.nodes[0]);
+    let vb_idx = nodes.keys().position(|x| x == &elem.nodes[1]);
+    let ve_idx = nodes.keys().position(|x| x == &elem.nodes[2]);
+
+    if let Some(i) = vc_idx {
+        h_mat[i][g_vec.len()] = 1.0;
+    }
+    if let Some(i) = vb_idx {
+        h_mat[i][g_vec.len() + 1] = 1.0;
+    }
+    if let Some(i) = ve_idx {
+        h_mat[i][g_vec.len() + 2] = 1.0;
+    }
+
+    g_vec.push(Box::new(move |x: &Vec<f64>| {
+        let vc = match vc_idx {
+            Some(i) => x[i],
+            None => 0.0,
+        };
+        let vb = match vb_idx {
+            Some(i) => x[i],
+            None => 0.0,
+        };
+        let ve = match ve_idx {
+            Some(i) => x[i],
+            None => 0.0,
+        };
+
+        let q = device::npn::NPN {
+            vc: vc,
+            vb: vb,
+            ve: ve,
+        };
+        q.ic()
+    }));
+    g_vec.push(Box::new(move |x: &Vec<f64>| {
+        let vc = match vc_idx {
+            Some(i) => x[i],
+            None => 0.0,
+        };
+        let vb = match vb_idx {
+            Some(i) => x[i],
+            None => 0.0,
+        };
+        let ve = match ve_idx {
+            Some(i) => x[i],
+            None => 0.0,
+        };
+
+        let q = device::npn::NPN {
+            vc: vc,
+            vb: vb,
+            ve: ve,
+        };
+        q.ib()
+    }));
+    g_vec.push(Box::new(move |x: &Vec<f64>| {
+        let vc = match vc_idx {
+            Some(i) => x[i],
+            None => 0.0,
+        };
+        let vb = match vb_idx {
+            Some(i) => x[i],
+            None => 0.0,
+        };
+        let ve = match ve_idx {
+            Some(i) => x[i],
+            None => 0.0,
+        };
+
+        let q = device::npn::NPN {
+            vc: vc,
+            vb: vb,
+            ve: ve,
+        };
+        q.ie()
     }));
 }
 
@@ -126,5 +213,32 @@ mod tests {
 
         let x_test: Vec<f64> = vec![1.5, 1.0];
         assert!(g[0](&x_test) > 0.0);
+    }
+
+    #[test]
+    fn test_load_npn() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::NPN,
+            name: String::from("Q1"),
+            nodes: vec![String::from("1"), String::from("2"), String::from("3")],
+            value: None,
+        };
+        let nodes = BTreeMap::from([
+            (String::from("1"), device::RowType::Voltage),
+            (String::from("2"), device::RowType::Voltage),
+            (String::from("3"), device::RowType::Voltage),
+        ]);
+        let mut h: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
+        let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
+
+        load_npn(&elem, &nodes, &mut h, &mut g);
+
+        assert_eq!(h, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]);
+        assert_eq!(g.len(), 3);
+
+        let x_test: Vec<f64> = vec![2.0, 1.0, 0.0];
+        assert!(g[0](&x_test) > 0.0);
+        assert!(g[1](&x_test) > 0.0);
+        assert!(g[2](&x_test) < 0.0);
     }
 }
