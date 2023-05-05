@@ -47,11 +47,19 @@ fn main() {
     // gauss_lu::solve(&mut a_mat, &mut b_vec, &mut x_vec);
     let n_iters = newtons_method::solve(&nodes, &elems, &mut x_vec, &a_mat, &b_vec, &h_mat, &g_vec);
 
-    println!("n_iters={}", n_iters);
-
-    for ((node, type_), val) in nodes.iter().zip(x_vec.iter()) {
-        println!("{node} ({type_:?}): {val}");
-    }
+    // Display as CSV
+    println!(
+        "n_iters{}",
+        nodes.keys().fold(String::new(), |a, b| a + "," + b)
+    );
+    println!(
+        "{}{}",
+        n_iters,
+        x_vec
+            .iter()
+            .map(|x| x.to_string())
+            .fold(String::new(), |a, b| a + "," + &b)
+    );
 }
 
 fn find_nodes(elems: &Vec<device::SpiceElem>) -> BTreeMap<String, device::RowType> {
