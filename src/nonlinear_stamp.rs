@@ -56,3 +56,72 @@ fn load_diode(
         a[j][i] -= g_eq;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_load_diode_node_0_gnd() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::Diode,
+            name: String::from("D1"),
+            nodes: vec![String::from("0"), String::from("1")],
+            value: None,
+        };
+        let nodes = BTreeMap::from([(String::from("1"), device::RowType::Voltage)]);
+        let x: Vec<f64> = vec![1.0];
+        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 1]; 1];
+        let mut b: Vec<f64> = vec![0.0; 1];
+
+        load_diode(&elem, &nodes, &x, &mut a, &mut b);
+
+        assert!(a[0][0] > 0.0);
+        assert!(b[0] < 0.0);
+    }
+
+    #[test]
+    fn test_load_diode_node_1_gnd() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::Diode,
+            name: String::from("D1"),
+            nodes: vec![String::from("1"), String::from("0")],
+            value: None,
+        };
+        let nodes = BTreeMap::from([(String::from("1"), device::RowType::Voltage)]);
+        let x: Vec<f64> = vec![1.0];
+        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 1]; 1];
+        let mut b: Vec<f64> = vec![0.0; 1];
+
+        load_diode(&elem, &nodes, &x, &mut a, &mut b);
+
+        assert!(a[0][0] > 0.0);
+        assert!(b[0] > 0.0);
+    }
+
+    #[test]
+    fn test_load_diode_two_nodes() {
+        let elem = device::SpiceElem {
+            dtype: device::DType::Diode,
+            name: String::from("D1"),
+            nodes: vec![String::from("1"), String::from("2")],
+            value: None,
+        };
+        let nodes = BTreeMap::from([
+            (String::from("1"), device::RowType::Voltage),
+            (String::from("2"), device::RowType::Voltage),
+        ]);
+        let x: Vec<f64> = vec![1.0, 2.0];
+        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
+        let mut b: Vec<f64> = vec![0.0; 2];
+
+        load_diode(&elem, &nodes, &x, &mut a, &mut b);
+
+        assert!(a[0][0] > 0.0);
+        assert!(a[0][1] < 0.0);
+        assert!(a[1][0] < 0.0);
+        assert!(a[1][1] > 0.0);
+        assert!(b[0] > 0.0);
+        assert!(b[1] < 0.0);
+    }
+}

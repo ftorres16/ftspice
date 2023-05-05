@@ -20,7 +20,9 @@ const GND: &str = "0";
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    let file = &args[1];
+    let file = &args
+        .get(1)
+        .expect("Insufficient arguments. Specify spice file to simulate.");
 
     let (elems, _) = parser::parse_spice_file(file);
 
