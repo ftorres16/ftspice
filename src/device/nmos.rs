@@ -11,7 +11,7 @@ pub struct NMOS {
     pub vs: f64,
 }
 
-const BETA: f64 = 0.5;
+const BETA: f64 = 0.5e-3;
 const VT: f64 = 0.6;
 const LAMBDA: f64 = 0.01;
 

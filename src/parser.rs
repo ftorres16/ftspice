@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fs;
 
 use crate::command;
@@ -42,6 +41,7 @@ pub fn parse_spice_file(file: &str) -> (Vec<device::SpiceElem>, Vec<command::Com
 
                 match cmd.as_rule() {
                     Rule::op_cmd => cmds.push(parse_op_cmd()),
+                    Rule::dc_cmd => cmds.push(parse_dc_cmd(cmd)),
                     _ => unreachable!(),
                 }
             }
@@ -154,11 +154,23 @@ fn parse_mos(node: Pair<Rule>) -> device::SpiceElem {
 }
 
 fn parse_op_cmd() -> command::Command {
-    let cmd = command::Command {
-        ctype: command::CmdType::Op,
-        params: HashMap::new(),
-    };
-    cmd
+    command::Command::Op
+}
+
+fn parse_dc_cmd(cmd: Pair<Rule>) -> command::Command {
+    let mut cmd_details = cmd.into_inner();
+
+    let source = cmd_details.next().unwrap().as_str();
+    let start = parse_value(cmd_details.next().unwrap());
+    let stop = parse_value(cmd_details.next().unwrap());
+    let step = parse_value(cmd_details.next().unwrap());
+
+    command::Command::DC(command::DCParams {
+        source: String::from(source),
+        start: start,
+        stop: stop,
+        step: step,
+    })
 }
 
 fn parse_value(value: Pair<Rule>) -> f64 {
@@ -207,7 +219,7 @@ mod tests {
         assert!(matches!(elems[2].dtype, device::DType::Res));
 
         assert_eq!(cmds.len(), 1);
-        assert!(matches!(cmds[0].ctype, command::CmdType::Op));
+        assert!(matches!(cmds[0], command::Command::Op));
     }
 
     #[test]
@@ -220,7 +232,7 @@ mod tests {
         assert!(matches!(elems[2].dtype, device::DType::Res));
 
         assert_eq!(cmds.len(), 1);
-        assert!(matches!(cmds[0].ctype, command::CmdType::Op));
+        assert!(matches!(cmds[0], command::Command::Op));
     }
 
     #[test]
@@ -233,7 +245,7 @@ mod tests {
         assert!(matches!(elems[2].dtype, device::DType::Diode));
 
         assert_eq!(cmds.len(), 1);
-        assert!(matches!(cmds[0].ctype, command::CmdType::Op));
+        assert!(matches!(cmds[0], command::Command::Op));
     }
 
     #[test]
@@ -248,7 +260,7 @@ mod tests {
         assert!(matches!(elems[4].dtype, device::DType::NPN));
 
         assert_eq!(cmds.len(), 1);
-        assert!(matches!(cmds[0].ctype, command::CmdType::Op));
+        assert!(matches!(cmds[0], command::Command::Op));
     }
 
     #[test]
@@ -262,7 +274,21 @@ mod tests {
         assert!(matches!(elems[3].dtype, device::DType::NMOS));
 
         assert_eq!(cmds.len(), 1);
-        assert!(matches!(cmds[0].ctype, command::CmdType::Op));
+        assert!(matches!(cmds[0], command::Command::Op));
+    }
+
+    #[test]
+    fn parse_spice_file_v_divider_sweep_test() {
+        let (elems, cmds) = parse_spice_file("test/v_divider_sweep.sp");
+
+        assert_eq!(elems.len(), 3);
+        assert!(matches!(elems[0].dtype, device::DType::Vdd));
+        assert!(matches!(elems[1].dtype, device::DType::Res));
+        assert!(matches!(elems[2].dtype, device::DType::Res));
+
+        assert_eq!(cmds.len(), 2);
+        assert!(matches!(cmds[0], command::Command::Op));
+        assert!(matches!(cmds[1], command::Command::DC(_)));
     }
 
     #[test]
@@ -342,10 +368,27 @@ mod tests {
             .next()
             .unwrap();
 
-        let elem = parse_op_cmd();
+        let cmd = parse_op_cmd();
 
-        assert!(matches!(elem.ctype, command::CmdType::Op));
-        assert!(elem.params.is_empty());
+        assert!(matches!(cmd, command::Command::Op));
+    }
+
+    #[test]
+    fn parse_dc_cmd_generic() {
+        let pair = SpiceParser::parse(Rule::dc_cmd, ".DC V1 0 1 1m")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let cmd = parse_dc_cmd(pair);
+
+        assert!(matches!(cmd, command::Command::DC(_)));
+        if let command::Command::DC(params) = cmd {
+            assert_eq!(params.source, "V1");
+            assert_eq!(params.start, 0.0);
+            assert_eq!(params.stop, 1.0);
+            assert_eq!(params.step, 1e-3);
+        }
     }
 
     #[test]

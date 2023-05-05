@@ -1,12 +1,13 @@
-use std::collections::HashMap;
-
 #[derive(Debug)]
-pub enum CmdType {
+pub enum Command {
     Op,
+    DC(DCParams),
 }
 
 #[derive(Debug)]
-pub struct Command {
-    pub ctype: CmdType,
-    pub params: HashMap<String, f64>,
+pub struct DCParams {
+    pub source: String,
+    pub start: f64,
+    pub stop: f64,
+    pub step: f64,
 }
