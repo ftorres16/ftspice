@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use crate::device;
-use crate::gauss_lu;
-use crate::linalg;
+use crate::engine::gauss_lu;
+use crate::engine::linalg;
 use crate::nonlinear_stamp;
 
 const MAX_ITERS: u64 = 100;

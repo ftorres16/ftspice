@@ -3,8 +3,11 @@ use std::collections::BTreeMap;
 use crate::command;
 use crate::device;
 use crate::linear_stamp;
-use crate::newtons_method;
 use crate::nonlinear_func;
+
+mod gauss_lu;
+mod linalg;
+mod newtons_method;
 
 const GND: &str = "0";
 
