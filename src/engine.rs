@@ -123,26 +123,12 @@ impl Engine {
         });
 
         for sweep_val in sweep_iter {
-            match sweep_elem.dtype {
-                // Undo previous stamp, and add new one with the swept value
-                device::DType::Vdd => {
-                    let mut a_temp = self.a.clone(); // Ignore `a` updates
-
-                    sweep_elem.value = Some(-sweep_elem.value.unwrap());
-                    linear_stamp::load_vdd(&sweep_elem, &self.nodes, &mut a_temp, &mut b_temp);
-
-                    sweep_elem.value = Some(sweep_val);
-                    linear_stamp::load_vdd(&sweep_elem, &self.nodes, &mut a_temp, &mut b_temp);
-                }
-                device::DType::Idd => {
-                    sweep_elem.value = Some(-sweep_elem.value.unwrap());
-                    linear_stamp::load_idd(&sweep_elem, &self.nodes, &mut b_temp);
-
-                    sweep_elem.value = Some(sweep_val);
-                    linear_stamp::load_idd(&sweep_elem, &self.nodes, &mut b_temp);
-                }
-                _ => unreachable!(),
-            }
+            // Undo previous stamp, and add new one with the swept value
+            // Ignore `a` updates, connectivity doesn't change
+            sweep_elem.value = Some(-sweep_elem.value.unwrap());
+            linear_stamp::load(&sweep_elem, &self.nodes, &mut self.a.clone(), &mut b_temp);
+            sweep_elem.value = Some(sweep_val);
+            linear_stamp::load(&sweep_elem, &self.nodes, &mut self.a.clone(), &mut b_temp);
 
             let n_iters = newtons_method::solve(
                 &self.nodes,
