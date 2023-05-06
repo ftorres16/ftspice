@@ -2,7 +2,7 @@ pub mod diode;
 pub mod nmos;
 pub mod npn;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DType {
     Vdd,
     Idd,
@@ -18,7 +18,7 @@ pub enum RowType {
     Current,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SpiceElem {
     pub dtype: DType,
     pub name: String,

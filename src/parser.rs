@@ -292,6 +292,20 @@ mod tests {
     }
 
     #[test]
+    fn parse_spice_file_i_divider_sweep_test() {
+        let (elems, cmds) = parse_spice_file("test/i_divider_sweep.sp");
+
+        assert_eq!(elems.len(), 3);
+        assert!(matches!(elems[0].dtype, device::DType::Idd));
+        assert!(matches!(elems[1].dtype, device::DType::Res));
+        assert!(matches!(elems[2].dtype, device::DType::Res));
+
+        assert_eq!(cmds.len(), 2);
+        assert!(matches!(cmds[0], command::Command::Op));
+        assert!(matches!(cmds[1], command::Command::DC(_)));
+    }
+
+    #[test]
     fn parse_res_generic() {
         let pair = SpiceParser::parse(Rule::r_node, "R1 1 0 R=2.2k")
             .unwrap()
@@ -374,7 +388,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_dc_cmd_generic() {
+    fn parse_dc_cmd_v_generic() {
         let pair = SpiceParser::parse(Rule::dc_cmd, ".DC V1 0 1 1m")
             .unwrap()
             .next()
@@ -385,6 +399,24 @@ mod tests {
         assert!(matches!(cmd, command::Command::DC(_)));
         if let command::Command::DC(params) = cmd {
             assert_eq!(params.source, "V1");
+            assert_eq!(params.start, 0.0);
+            assert_eq!(params.stop, 1.0);
+            assert_eq!(params.step, 1e-3);
+        }
+    }
+
+    #[test]
+    fn parse_dc_cmd_i_generic() {
+        let pair = SpiceParser::parse(Rule::dc_cmd, ".DC I1 0 1 1m")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let cmd = parse_dc_cmd(pair);
+
+        assert!(matches!(cmd, command::Command::DC(_)));
+        if let command::Command::DC(params) = cmd {
+            assert_eq!(params.source, "I1");
             assert_eq!(params.start, 0.0);
             assert_eq!(params.stop, 1.0);
             assert_eq!(params.step, 1e-3);
