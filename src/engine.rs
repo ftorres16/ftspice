@@ -104,11 +104,12 @@ impl Engine {
             _ => panic!("DC simulation wrongly configured."),
         };
 
-        let src_idx = self
-            .nodes
-            .keys()
-            .position(|x| x == &dc_params.source)
-            .expect("Sweep source not found");
+        let mut sweep_elem = self
+            .elems
+            .iter()
+            .find(|e| e.name == dc_params.source)
+            .expect("Sweep source not found")
+            .to_owned();
 
         let mut x_hist = Vec::new();
         let mut n_iters_hist = Vec::new();
@@ -122,7 +123,26 @@ impl Engine {
         });
 
         for sweep_val in sweep_iter {
-            b_temp[src_idx] = sweep_val;
+            match sweep_elem.dtype {
+                // Undo previous stamp, and add new one with the swept value
+                device::DType::Vdd => {
+                    let mut a_temp = self.a.clone(); // Ignore `a` updates
+
+                    sweep_elem.value = Some(-sweep_elem.value.unwrap());
+                    linear_stamp::load_vdd(&sweep_elem, &self.nodes, &mut a_temp, &mut b_temp);
+
+                    sweep_elem.value = Some(sweep_val);
+                    linear_stamp::load_vdd(&sweep_elem, &self.nodes, &mut a_temp, &mut b_temp);
+                }
+                device::DType::Idd => {
+                    sweep_elem.value = Some(-sweep_elem.value.unwrap());
+                    linear_stamp::load_idd(&sweep_elem, &self.nodes, &mut b_temp);
+
+                    sweep_elem.value = Some(sweep_val);
+                    linear_stamp::load_idd(&sweep_elem, &self.nodes, &mut b_temp);
+                }
+                _ => unreachable!(),
+            }
 
             let n_iters = newtons_method::solve(
                 &self.nodes,
