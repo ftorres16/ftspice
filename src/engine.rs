@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::iter::successors;
 
 use crate::command;
 use crate::device;
@@ -26,15 +27,18 @@ impl Engine {
     pub fn new(elems: Vec<device::SpiceElem>, mut cmds: Vec<command::Command>) -> Self {
         let mut nodes = BTreeMap::new();
 
-        for elem in elems.iter() {
-            for node in elem.nodes.iter() {
-                nodes.insert(node.to_string(), device::RowType::Voltage);
-            }
-
-            if let device::DType::Vdd = elem.dtype {
-                nodes.insert(elem.name.to_string(), device::RowType::Current);
-            }
-        }
+        nodes.extend(
+            elems
+                .iter()
+                .flat_map(|e| e.nodes.iter())
+                .map(|x| (x.to_string(), device::RowType::Voltage)),
+        );
+        nodes.extend(
+            elems
+                .iter()
+                .filter(|x| matches!(x.dtype, device::DType::Vdd))
+                .map(|x| (x.name.to_string(), device::RowType::Current)),
+        );
 
         if !nodes.contains_key(GND) {
             panic!("GND not found!");
@@ -60,7 +64,7 @@ impl Engine {
             Some(i) => Some(cmds.remove(i)),
             None => None,
         };
-        let op_param = match cmds
+        let dc_cmd = match cmds
             .iter()
             .position(|x| matches!(x, command::Command::DC(_)))
         {
@@ -76,7 +80,7 @@ impl Engine {
             elems: elems,
             nodes: nodes,
             op_cmd: op_cmd,
-            dc_cmd: op_param,
+            dc_cmd: dc_cmd,
         }
     }
 
@@ -95,7 +99,6 @@ impl Engine {
     }
 
     pub fn run_dc(&self) -> (Vec<u64>, Vec<Vec<f64>>) {
-        // if let command::Command::DC(dc_params) = self.dc_cmd.expect("No DC simulation params");
         let dc_params = match &self.dc_cmd {
             Some(command::Command::DC(x)) => x,
             _ => panic!("DC simulation wrongly configured."),
@@ -107,15 +110,18 @@ impl Engine {
             .position(|x| x == &dc_params.source)
             .expect("Sweep source not found");
 
-        let mut sweep_val = dc_params.start;
-
         let mut x_hist = Vec::new();
         let mut n_iters_hist = Vec::new();
 
         let mut x: Vec<f64> = vec![0.0; self.a.len()];
         let mut b_temp = self.b.clone();
 
-        while sweep_val < dc_params.stop {
+        let sweep_iter = successors(Some(dc_params.start), |x| {
+            let next = x + dc_params.step;
+            (next < dc_params.stop).then_some(next)
+        });
+
+        for sweep_val in sweep_iter {
             b_temp[src_idx] = sweep_val;
 
             let n_iters = newtons_method::solve(
@@ -130,8 +136,6 @@ impl Engine {
 
             n_iters_hist.push(n_iters);
             x_hist.push(x.clone());
-
-            sweep_val += dc_params.step;
         }
 
         (n_iters_hist, x_hist)

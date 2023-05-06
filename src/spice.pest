@@ -3,7 +3,7 @@ file = { SOI ~ ((node | command)? ~ NEWLINE)* ~ end_cmd ~ EOI }
 command =  { op_cmd | dc_cmd }
 
 op_cmd = { ^".op" }
-dc_cmd = { ^".dc" ~ (v_name | i_name) ~ value ~ value ~ value }
+dc_cmd = { ^".dc" ~ v_name ~ value ~ value ~ value }
 end_cmd = _{ ^".end" ~ NEWLINE? }
 
 node = { r_node | v_node | i_node | dio_node | bjt_node | mos_node }
