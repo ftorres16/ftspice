@@ -125,10 +125,11 @@ impl Engine {
         for sweep_val in sweep_iter {
             // Undo previous stamp, and add new one with the swept value
             // Ignore `a` updates, connectivity doesn't change
+            let mut a_temp = self.a.clone();
             sweep_elem.value = Some(-sweep_elem.value.unwrap());
-            linear_stamp::load(&sweep_elem, &self.nodes, &mut self.a.clone(), &mut b_temp);
+            linear_stamp::load(&sweep_elem, &self.nodes, &mut a_temp, &mut b_temp);
             sweep_elem.value = Some(sweep_val);
-            linear_stamp::load(&sweep_elem, &self.nodes, &mut self.a.clone(), &mut b_temp);
+            linear_stamp::load(&sweep_elem, &self.nodes, &mut a_temp, &mut b_temp);
 
             let n_iters = newtons_method::solve(
                 &self.nodes,
