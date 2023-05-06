@@ -5,7 +5,7 @@ use crate::gauss_lu;
 use crate::linalg;
 use crate::nonlinear_stamp;
 
-const MAX_ITERS: i64 = 100;
+const MAX_ITERS: u64 = 100;
 
 const RELATIVE_TOLERANCE: f64 = 0.001;
 const ABSOLUTE_TOLERANCE_V: f64 = 1e-3;
@@ -33,7 +33,7 @@ pub fn solve(
     b_vec: &Vec<f64>,
     h_mat: &Vec<Vec<f64>>,
     g_vec: &Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
-) -> i64 {
+) -> u64 {
     let mut err = Err {
         v: f64::INFINITY,
         i: f64::INFINITY,
