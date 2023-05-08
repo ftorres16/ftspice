@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::device::stamp;
 use crate::device::stamp::Stamp;
 use crate::node;
@@ -31,7 +29,7 @@ impl Stamp for Diode {
 
     fn linear_stamp(
         &self,
-        _nodes: &HashMap<String, node::MNANode>,
+        _nodes: &node::NodeCollection,
         _a: &mut Vec<Vec<f64>>,
         _b: &mut Vec<f64>,
     ) {
@@ -39,7 +37,7 @@ impl Stamp for Diode {
 
     fn undo_linear_stamp(
         &self,
-        _nodes: &HashMap<String, node::MNANode>,
+        _nodes: &node::NodeCollection,
         _a: &mut Vec<Vec<f64>>,
         _b: &mut Vec<f64>,
     ) {
@@ -51,12 +49,12 @@ impl Stamp for Diode {
 
     fn nonlinear_funcs(
         &self,
-        nodes: &HashMap<String, node::MNANode>,
+        nodes: &node::NodeCollection,
         h_mat: &mut Vec<Vec<f64>>,
         g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
     ) {
-        let vpos_idx = nodes.get(&self.nodes[0]).map(|x| x.idx);
-        let vneg_idx = nodes.get(&self.nodes[1]).map(|x| x.idx);
+        let vpos_idx = nodes.get_idx(&self.nodes[0]);
+        let vneg_idx = nodes.get_idx(&self.nodes[1]);
 
         if let Some(i) = vpos_idx {
             h_mat[i][g_vec.len()] = 1.0;
@@ -84,13 +82,13 @@ impl Stamp for Diode {
 
     fn nonlinear_stamp(
         &self,
-        nodes: &HashMap<String, node::MNANode>,
+        nodes: &node::NodeCollection,
         x: &Vec<f64>,
         a: &mut Vec<Vec<f64>>,
         b: &mut Vec<f64>,
     ) {
-        let vpos_idx = nodes.get(&self.nodes[0]).map(|x| x.idx);
-        let vneg_idx = nodes.get(&self.nodes[1]).map(|x| x.idx);
+        let vpos_idx = nodes.get_idx(&self.nodes[0]);
+        let vneg_idx = nodes.get_idx(&self.nodes[1]);
 
         let vpos = match vpos_idx {
             Some(i) => x[i],
@@ -127,7 +125,7 @@ impl Stamp for Diode {
 mod tests {
     use super::*;
 
-    fn parse_dio(dio: &Diode) -> HashMap<String, node::MNANode> {
+    fn parse_dio(dio: &Diode) -> node::NodeCollection {
         node::parse_elems(&vec![Box::new(dio.clone())])
     }
 
@@ -212,8 +210,8 @@ mod tests {
 
         dio.nonlinear_funcs(&nodes, &mut h, &mut g);
 
-        let n1 = nodes.get("1").unwrap().idx;
-        let n2 = nodes.get("2").unwrap().idx;
+        let n1 = nodes.get_idx("1").unwrap();
+        let n2 = nodes.get_idx("2").unwrap();
 
         let mut h_model = vec![vec![0.0; 1]; 2];
         h_model[n1][0] = 1.0;
@@ -276,8 +274,8 @@ mod tests {
 
         dio.nonlinear_stamp(&nodes, &x, &mut a, &mut b);
 
-        let n1 = nodes.get("1").unwrap().idx;
-        let n2 = nodes.get("2").unwrap().idx;
+        let n1 = nodes.get_idx("1").unwrap();
+        let n2 = nodes.get_idx("2").unwrap();
 
         assert!(a[n1][n1] > 0.0);
         assert!(a[n1][n2] < 0.0);

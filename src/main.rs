@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::env;
 
 extern crate pest;
@@ -41,7 +40,7 @@ fn main() {
     }
 }
 
-fn print_headers(nodes: &HashMap<String, node::MNANode>) {
+fn print_headers(nodes: &node::NodeCollection) {
     println!(
         "n_iters{}",
         nodes.keys().fold(String::new(), |a, b| a + "," + b)

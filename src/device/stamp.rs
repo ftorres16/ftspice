@@ -1,5 +1,4 @@
 use crate::node;
-use std::collections::HashMap;
 
 // MNA sgroups from Circuit Simulation Book
 pub enum GType {
@@ -16,16 +15,11 @@ pub trait Stamp {
 
     fn set_value(&mut self, value: f64);
 
-    fn linear_stamp(
-        &self,
-        nodes: &HashMap<String, node::MNANode>,
-        a: &mut Vec<Vec<f64>>,
-        b: &mut Vec<f64>,
-    );
+    fn linear_stamp(&self, nodes: &node::NodeCollection, a: &mut Vec<Vec<f64>>, b: &mut Vec<f64>);
 
     fn undo_linear_stamp(
         &self,
-        nodes: &HashMap<String, node::MNANode>,
+        nodes: &node::NodeCollection,
         a: &mut Vec<Vec<f64>>,
         b: &mut Vec<f64>,
     );
@@ -34,14 +28,14 @@ pub trait Stamp {
 
     fn nonlinear_funcs(
         &self,
-        nodes: &HashMap<String, node::MNANode>,
+        nodes: &node::NodeCollection,
         h_mat: &mut Vec<Vec<f64>>,
         g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
     );
 
     fn nonlinear_stamp(
         &self,
-        nodes: &HashMap<String, node::MNANode>,
+        nodes: &node::NodeCollection,
         x: &Vec<f64>,
         a: &mut Vec<Vec<f64>>,
         b: &mut Vec<f64>,

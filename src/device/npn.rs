@@ -1,7 +1,6 @@
 use crate::device::stamp;
 use crate::device::stamp::Stamp;
 use crate::node;
-use std::collections::HashMap;
 
 mod model;
 
@@ -30,7 +29,7 @@ impl Stamp for NPN {
 
     fn linear_stamp(
         &self,
-        _nodes: &HashMap<String, node::MNANode>,
+        _nodes: &node::NodeCollection,
         _a: &mut Vec<Vec<f64>>,
         _b: &mut Vec<f64>,
     ) {
@@ -38,7 +37,7 @@ impl Stamp for NPN {
 
     fn undo_linear_stamp(
         &self,
-        _nodes: &HashMap<String, node::MNANode>,
+        _nodes: &node::NodeCollection,
         _a: &mut Vec<Vec<f64>>,
         _b: &mut Vec<f64>,
     ) {
@@ -50,13 +49,13 @@ impl Stamp for NPN {
 
     fn nonlinear_funcs(
         &self,
-        nodes: &HashMap<String, node::MNANode>,
+        nodes: &node::NodeCollection,
         h_mat: &mut Vec<Vec<f64>>,
         g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
     ) {
-        let vc_idx = nodes.get(&self.nodes[0]).map(|x| x.idx);
-        let vb_idx = nodes.get(&self.nodes[1]).map(|x| x.idx);
-        let ve_idx = nodes.get(&self.nodes[2]).map(|x| x.idx);
+        let vc_idx = nodes.get_idx(&self.nodes[0]);
+        let vb_idx = nodes.get_idx(&self.nodes[1]);
+        let ve_idx = nodes.get_idx(&self.nodes[2]);
 
         if let Some(i) = vc_idx {
             h_mat[i][g_vec.len()] = 1.0;
@@ -135,14 +134,14 @@ impl Stamp for NPN {
 
     fn nonlinear_stamp(
         &self,
-        nodes: &HashMap<String, node::MNANode>,
+        nodes: &node::NodeCollection,
         x: &Vec<f64>,
         a: &mut Vec<Vec<f64>>,
         b: &mut Vec<f64>,
     ) {
-        let vc_idx = nodes.get(&self.nodes[0]).map(|x| x.idx);
-        let vb_idx = nodes.get(&self.nodes[1]).map(|x| x.idx);
-        let ve_idx = nodes.get(&self.nodes[2]).map(|x| x.idx);
+        let vc_idx = nodes.get_idx(&self.nodes[0]);
+        let vb_idx = nodes.get_idx(&self.nodes[1]);
+        let ve_idx = nodes.get_idx(&self.nodes[2]);
 
         let vc = match vc_idx {
             Some(i) => x[i],
@@ -201,7 +200,7 @@ impl Stamp for NPN {
 mod tests {
     use super::*;
 
-    fn parse_npn(q: &NPN) -> HashMap<String, node::MNANode> {
+    fn parse_npn(q: &NPN) -> node::NodeCollection {
         node::parse_elems(&vec![Box::new(q.clone())])
     }
 
@@ -248,9 +247,9 @@ mod tests {
 
         q.nonlinear_funcs(&nodes, &mut h, &mut g);
 
-        let n1 = nodes.get("1").unwrap().idx;
-        let n2 = nodes.get("2").unwrap().idx;
-        let n3 = nodes.get("3").unwrap().idx;
+        let n1 = nodes.get_idx("1").unwrap();
+        let n2 = nodes.get_idx("2").unwrap();
+        let n3 = nodes.get_idx("3").unwrap();
 
         let mut h_model = vec![vec![0.0; h[0].len()]; h.len()];
         h_model[n1][0] = 1.0;
@@ -278,9 +277,9 @@ mod tests {
         };
         let nodes = parse_npn(&q);
 
-        let n1 = nodes.get("1").unwrap().idx;
-        let n2 = nodes.get("2").unwrap().idx;
-        let n3 = nodes.get("3").unwrap().idx;
+        let n1 = nodes.get_idx("1").unwrap();
+        let n2 = nodes.get_idx("2").unwrap();
+        let n3 = nodes.get_idx("3").unwrap();
 
         let mut x: Vec<f64> = vec![0.0; 3];
         x[n1] = 2.0;

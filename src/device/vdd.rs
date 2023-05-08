@@ -1,7 +1,6 @@
 use crate::device::stamp;
 use crate::device::stamp::Stamp;
 use crate::node;
-use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Vdd {
@@ -27,18 +26,12 @@ impl Stamp for Vdd {
         self.val = value;
     }
 
-    fn linear_stamp(
-        &self,
-        nodes: &HashMap<String, node::MNANode>,
-        a: &mut Vec<Vec<f64>>,
-        b: &mut Vec<f64>,
-    ) {
-        let vneg_idx = nodes.get(&self.nodes[0]).map(|x| x.idx);
-        let vpos_idx = nodes.get(&self.nodes[1]).map(|x| x.idx);
+    fn linear_stamp(&self, nodes: &node::NodeCollection, a: &mut Vec<Vec<f64>>, b: &mut Vec<f64>) {
+        let vneg_idx = nodes.get_idx(&self.nodes[0]);
+        let vpos_idx = nodes.get_idx(&self.nodes[1]);
         let is_idx = nodes
-            .get(&self.name)
-            .expect("Couldn't find node label for source.")
-            .idx;
+            .get_idx(&self.name)
+            .expect("Couldn't find node label for source.");
 
         b[is_idx] += self.val;
 
@@ -55,16 +48,15 @@ impl Stamp for Vdd {
 
     fn undo_linear_stamp(
         &self,
-        nodes: &HashMap<String, node::MNANode>,
+        nodes: &node::NodeCollection,
         a: &mut Vec<Vec<f64>>,
         b: &mut Vec<f64>,
     ) {
-        let vneg_idx = nodes.get(&self.nodes[0]).map(|x| x.idx);
-        let vpos_idx = nodes.get(&self.nodes[1]).map(|x| x.idx);
+        let vneg_idx = nodes.get_idx(&self.nodes[0]);
+        let vpos_idx = nodes.get_idx(&self.nodes[1]);
         let is_idx = nodes
-            .get(&self.name)
-            .expect("Couldn't find node label for source.")
-            .idx;
+            .get_idx(&self.name)
+            .expect("Couldn't find node label for source.");
 
         b[is_idx] += self.val;
 
@@ -85,7 +77,7 @@ impl Stamp for Vdd {
 
     fn nonlinear_funcs(
         &self,
-        _nodes: &HashMap<String, node::MNANode>,
+        _nodes: &node::NodeCollection,
         _h_mat: &mut Vec<Vec<f64>>,
         _g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
     ) {
@@ -93,7 +85,7 @@ impl Stamp for Vdd {
 
     fn nonlinear_stamp(
         &self,
-        _nodes: &HashMap<String, node::MNANode>,
+        _nodes: &node::NodeCollection,
         _x: &Vec<f64>,
         _a: &mut Vec<Vec<f64>>,
         _b: &mut Vec<f64>,
@@ -105,7 +97,7 @@ impl Stamp for Vdd {
 mod tests {
     use super::*;
 
-    fn parse_vdd(vdd: &Vdd) -> HashMap<String, node::MNANode> {
+    fn parse_vdd(vdd: &Vdd) -> node::NodeCollection {
         node::parse_elems(&vec![Box::new(vdd.clone())])
     }
 
@@ -122,8 +114,8 @@ mod tests {
 
         vdd.linear_stamp(&nodes, &mut a, &mut b);
 
-        let n1 = nodes.get("1").unwrap().idx;
-        let v1 = nodes.get("V1").unwrap().idx;
+        let n1 = nodes.get_idx("1").unwrap();
+        let v1 = nodes.get_idx("V1").unwrap();
 
         let mut a_model = vec![vec![0.0; nodes.len()]; nodes.len()];
         let mut b_model = vec![0.0; nodes.len()];
@@ -149,8 +141,9 @@ mod tests {
 
         vdd.linear_stamp(&nodes, &mut a, &mut b);
 
-        let n1 = nodes.get("1").unwrap().idx;
-        let v1 = nodes.get("V1").unwrap().idx;
+        let n1 = nodes.get_idx("1").unwrap();
+        let v1 = nodes.get_idx("V1").unwrap();
+
         let mut a_model = vec![vec![0.0; nodes.len()]; nodes.len()];
         let mut b_model = vec![0.0; nodes.len()];
         a_model[n1][v1] = -1.0;
@@ -175,9 +168,9 @@ mod tests {
 
         vdd.linear_stamp(&nodes, &mut a, &mut b);
 
-        let n1 = nodes.get("1").unwrap().idx;
-        let n2 = nodes.get("2").unwrap().idx;
-        let v1 = nodes.get("V1").unwrap().idx;
+        let n1 = nodes.get_idx("1").unwrap();
+        let n2 = nodes.get_idx("2").unwrap();
+        let v1 = nodes.get_idx("V1").unwrap();
 
         let mut a_model = vec![vec![0.0; nodes.len()]; nodes.len()];
         let mut b_model = vec![0.0; nodes.len()];

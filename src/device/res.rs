@@ -1,7 +1,6 @@
 use crate::device::stamp;
 use crate::device::stamp::Stamp;
 use crate::node;
-use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Res {
@@ -27,16 +26,11 @@ impl Stamp for Res {
         self.val = value;
     }
 
-    fn linear_stamp(
-        &self,
-        nodes: &HashMap<String, node::MNANode>,
-        a: &mut Vec<Vec<f64>>,
-        _b: &mut Vec<f64>,
-    ) {
+    fn linear_stamp(&self, nodes: &node::NodeCollection, a: &mut Vec<Vec<f64>>, _b: &mut Vec<f64>) {
         let g = 1.0 / self.val;
 
-        let vneg_node = nodes.get(&self.nodes[0]).map(|x| x.idx);
-        let vpos_node = nodes.get(&self.nodes[1]).map(|x| x.idx);
+        let vneg_node = nodes.get_idx(&self.nodes[0]);
+        let vpos_node = nodes.get_idx(&self.nodes[1]);
 
         if let Some(i) = vneg_node {
             a[i][i] += g;
@@ -52,14 +46,14 @@ impl Stamp for Res {
 
     fn undo_linear_stamp(
         &self,
-        nodes: &HashMap<String, node::MNANode>,
+        nodes: &node::NodeCollection,
         a: &mut Vec<Vec<f64>>,
         _b: &mut Vec<f64>,
     ) {
         let g = 1.0 / self.val;
 
-        let vneg_node = nodes.get(&self.nodes[0]).map(|x| x.idx);
-        let vpos_node = nodes.get(&self.nodes[1]).map(|x| x.idx);
+        let vneg_node = nodes.get_idx(&self.nodes[0]);
+        let vpos_node = nodes.get_idx(&self.nodes[1]);
 
         if let Some(i) = vneg_node {
             a[i][i] -= g;
@@ -79,7 +73,7 @@ impl Stamp for Res {
 
     fn nonlinear_funcs(
         &self,
-        _nodes: &HashMap<String, node::MNANode>,
+        _nodes: &node::NodeCollection,
         _h_mat: &mut Vec<Vec<f64>>,
         _g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
     ) {
@@ -87,7 +81,7 @@ impl Stamp for Res {
 
     fn nonlinear_stamp(
         &self,
-        _nodes: &HashMap<String, node::MNANode>,
+        _nodes: &node::NodeCollection,
         _x: &Vec<f64>,
         _a: &mut Vec<Vec<f64>>,
         _b: &mut Vec<f64>,
@@ -99,7 +93,7 @@ impl Stamp for Res {
 mod tests {
     use super::*;
 
-    fn parse_res(res: &Res) -> HashMap<String, node::MNANode> {
+    fn parse_res(res: &Res) -> node::NodeCollection {
         node::parse_elems(&vec![Box::new(res.clone())])
     }
 
@@ -150,8 +144,8 @@ mod tests {
 
         res.linear_stamp(&nodes, &mut a, &mut b);
 
-        let n1 = nodes.get("1").unwrap().idx;
-        let n2 = nodes.get("2").unwrap().idx;
+        let n1 = nodes.get_idx("1").unwrap();
+        let n2 = nodes.get_idx("2").unwrap();
 
         let mut a_model = vec![vec![0.0; nodes.len()]; nodes.len()];
         a_model[n1][n1] = 1e-3;

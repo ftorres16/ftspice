@@ -6,6 +6,10 @@ use crate::device::stamp::Stamp;
 
 const GND: &str = "0";
 
+pub struct NodeCollection {
+    data: HashMap<String, MNANode>,
+}
+
 #[derive(Debug)]
 pub struct MNANode {
     pub ntype: NodeType,
@@ -18,14 +22,15 @@ pub enum NodeType {
     Current,
 }
 
-pub fn parse_elems(elems: &Vec<Box<dyn Stamp>>) -> HashMap<String, MNANode> {
-    let mut nodes = HashMap::new();
+pub fn parse_elems(elems: &Vec<Box<dyn Stamp>>) -> NodeCollection {
+    let mut map = HashMap::new();
+
     let v_names = elems
         .iter()
         .flat_map(|e| e.get_nodes().iter())
         .filter(|n| n != &GND)
         .collect::<HashSet<_>>();
-    nodes.extend(v_names.iter().enumerate().map(|(i, x)| {
+    map.extend(v_names.iter().enumerate().map(|(i, x)| {
         (
             x.to_string(),
             MNANode {
@@ -40,7 +45,7 @@ pub fn parse_elems(elems: &Vec<Box<dyn Stamp>>) -> HashMap<String, MNANode> {
         .filter(|x| matches!(x.gtype(), stamp::GType::G2))
         .map(|x| x.get_name())
         .collect::<HashSet<_>>();
-    nodes.extend(i_names.iter().enumerate().map(|(i, x)| {
+    map.extend(i_names.iter().enumerate().map(|(i, x)| {
         (
             x.to_string(),
             MNANode {
@@ -50,5 +55,33 @@ pub fn parse_elems(elems: &Vec<Box<dyn Stamp>>) -> HashMap<String, MNANode> {
         )
     }));
 
-    nodes
+    NodeCollection { data: map }
+}
+
+impl NodeCollection {
+    pub fn new() -> Self {
+        NodeCollection {
+            data: HashMap::new(),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    pub fn get_idx(&self, name: &str) -> Option<usize> {
+        self.data.get(name).map(|x| x.idx)
+    }
+
+    pub fn keys(&self) -> impl Iterator<Item = &String> {
+        self.data.keys()
+    }
+
+    pub fn values(&self) -> impl Iterator<Item = &MNANode> {
+        self.data.values()
+    }
+
+    pub fn insert(&mut self, name: &str, node: MNANode) {
+        self.data.insert(name.to_string(), node);
+    }
 }

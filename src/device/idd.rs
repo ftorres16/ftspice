@@ -1,7 +1,6 @@
 use crate::device::stamp;
 use crate::device::stamp::Stamp;
 use crate::node;
-use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Idd {
@@ -27,14 +26,9 @@ impl Stamp for Idd {
         self.val = value;
     }
 
-    fn linear_stamp(
-        &self,
-        nodes: &HashMap<String, node::MNANode>,
-        _a: &mut Vec<Vec<f64>>,
-        b: &mut Vec<f64>,
-    ) {
-        let vneg_node = nodes.get(&self.nodes[0]).map(|x| x.idx);
-        let vpos_node = nodes.get(&self.nodes[1]).map(|x| x.idx);
+    fn linear_stamp(&self, nodes: &node::NodeCollection, _a: &mut Vec<Vec<f64>>, b: &mut Vec<f64>) {
+        let vneg_node = nodes.get_idx(&self.nodes[0]);
+        let vpos_node = nodes.get_idx(&self.nodes[1]);
         let val = self.val;
 
         if let Some(i) = vpos_node {
@@ -47,12 +41,12 @@ impl Stamp for Idd {
 
     fn undo_linear_stamp(
         &self,
-        nodes: &HashMap<String, node::MNANode>,
+        nodes: &node::NodeCollection,
         _a: &mut Vec<Vec<f64>>,
         b: &mut Vec<f64>,
     ) {
-        let vneg_node = nodes.get(&self.nodes[0]).map(|x| x.idx);
-        let vpos_node = nodes.get(&self.nodes[1]).map(|x| x.idx);
+        let vneg_node = nodes.get_idx(&self.nodes[0]);
+        let vpos_node = nodes.get_idx(&self.nodes[1]);
         let val = self.val;
 
         if let Some(i) = vpos_node {
@@ -69,7 +63,7 @@ impl Stamp for Idd {
 
     fn nonlinear_funcs(
         &self,
-        _nodes: &HashMap<String, node::MNANode>,
+        _nodes: &node::NodeCollection,
         _h_mat: &mut Vec<Vec<f64>>,
         _g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
     ) {
@@ -77,7 +71,7 @@ impl Stamp for Idd {
 
     fn nonlinear_stamp(
         &self,
-        _nodes: &HashMap<String, node::MNANode>,
+        _nodes: &node::NodeCollection,
         _x: &Vec<f64>,
         _a: &mut Vec<Vec<f64>>,
         _b: &mut Vec<f64>,
@@ -89,7 +83,7 @@ impl Stamp for Idd {
 mod tests {
     use super::*;
 
-    fn parse_idd(idd: &Idd) -> HashMap<String, node::MNANode> {
+    fn parse_idd(idd: &Idd) -> node::NodeCollection {
         node::parse_elems(&vec![Box::new(idd.clone())])
     }
 
@@ -140,8 +134,8 @@ mod tests {
 
         idd.linear_stamp(&nodes, &mut a, &mut b);
 
-        let n1 = nodes.get("1").unwrap().idx;
-        let n2 = nodes.get("2").unwrap().idx;
+        let n1 = nodes.get_idx("1").unwrap();
+        let n2 = nodes.get_idx("2").unwrap();
 
         let mut b_model = vec![0.0; nodes.len()];
         b_model[n1] = -1e-3;

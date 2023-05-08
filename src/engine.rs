@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::iter::successors;
 
 use crate::command;
@@ -15,7 +14,7 @@ pub struct Engine {
     h: Vec<Vec<f64>>,
     g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
     pub elems: Vec<Box<dyn Stamp>>,
-    pub nodes: HashMap<String, node::MNANode>,
+    pub nodes: node::NodeCollection,
     pub op_cmd: Option<command::Command>,
     pub dc_cmd: Option<command::Command>,
 }
