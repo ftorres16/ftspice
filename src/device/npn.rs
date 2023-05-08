@@ -182,6 +182,23 @@ mod tests {
     }
 
     #[test]
+    fn test_undo_linear_stamp() {
+        let q = NPN {
+            name: String::from("M1"),
+            nodes: vec![String::from("1"), String::from("2"), String::from("3")],
+        };
+        let nodes = parse_npn(&q);
+        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
+        let mut b: Vec<f64> = vec![0.0; 2];
+
+        q.linear_stamp(&nodes, &mut a, &mut b);
+        q.undo_linear_stamp(&nodes, &mut a, &mut b);
+
+        assert_eq!(a, [[0.0, 0.0], [0.0, 0.0]]);
+        assert_eq!(b, [0.0, 0.0]);
+    }
+
+    #[test]
     fn test_count_nonlinear_funcs() {
         let q = NPN {
             name: String::from("Q1"),

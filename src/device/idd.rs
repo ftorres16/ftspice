@@ -88,7 +88,7 @@ mod tests {
     }
 
     #[test]
-    fn test_load_idd_node_0_gnd() {
+    fn test_linear_stamp_idd_node_0_gnd() {
         let idd = Idd {
             name: String::from("I1"),
             nodes: vec![String::from("1"), String::from("0")],
@@ -105,7 +105,7 @@ mod tests {
     }
 
     #[test]
-    fn test_load_idd_node_1_gnd() {
+    fn test_linear_stamp_idd_node_1_gnd() {
         let idd = Idd {
             name: String::from("I1"),
             nodes: vec![String::from("0"), String::from("1")],
@@ -122,7 +122,7 @@ mod tests {
     }
 
     #[test]
-    fn test_load_idd_to_nodes() {
+    fn test_linear_stamp_idd_to_nodes() {
         let idd = Idd {
             name: String::from("I1"),
             nodes: vec![String::from("1"), String::from("2")],
@@ -143,6 +143,24 @@ mod tests {
 
         assert_eq!(a, [[0.0, 0.0], [0.0, 0.0]]);
         assert_eq!(b, b_model);
+    }
+
+    #[test]
+    fn test_undo_linear_stamp() {
+        let idd = Idd {
+            name: String::from("I1"),
+            nodes: vec![String::from("1"), String::from("2")],
+            val: 1e-3,
+        };
+        let nodes = parse_idd(&idd);
+        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
+        let mut b: Vec<f64> = vec![0.0; 2];
+
+        idd.linear_stamp(&nodes, &mut a, &mut b);
+        idd.undo_linear_stamp(&nodes, &mut a, &mut b);
+
+        assert_eq!(a, [[0.0, 0.0], [0.0, 0.0]]);
+        assert_eq!(b, [0.0, 0.0]);
     }
 
     #[test]

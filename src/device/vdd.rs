@@ -102,7 +102,7 @@ mod tests {
     }
 
     #[test]
-    fn test_load_vdd_node_0_gnd() {
+    fn test_linear_stamp_vdd_node_0_gnd() {
         let vdd = Vdd {
             name: String::from("V1"),
             nodes: vec![String::from("0"), String::from("1")],
@@ -129,7 +129,7 @@ mod tests {
     }
 
     #[test]
-    fn test_load_vdd_node_1_gnd() {
+    fn test_linear_stamp_vdd_node_1_gnd() {
         let vdd = Vdd {
             name: String::from("V1"),
             nodes: vec![String::from("1"), String::from("0")],
@@ -156,7 +156,7 @@ mod tests {
     }
 
     #[test]
-    fn test_load_vdd_to_nodes() {
+    fn test_linear_stamp_vdd_to_nodes() {
         let vdd = Vdd {
             name: String::from("V1"),
             nodes: vec![String::from("1"), String::from("2")],
@@ -184,6 +184,24 @@ mod tests {
 
         assert_eq!(a, a_model);
         assert_eq!(b, b_model);
+    }
+
+    #[test]
+    fn test_undo_linear_stamp() {
+        let vdd = Vdd {
+            name: String::from("V1"),
+            nodes: vec![String::from("1"), String::from("2")],
+            val: 1e-3,
+        };
+        let nodes = parse_vdd(&vdd);
+        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
+        let mut b: Vec<f64> = vec![0.0; 3];
+
+        vdd.linear_stamp(&nodes, &mut a, &mut b);
+        vdd.undo_linear_stamp(&nodes, &mut a, &mut b);
+
+        assert_eq!(a, vec![vec![0.0; 3]; 3]);
+        assert_eq!(b, vec![0.0; 3]);
     }
 
     #[test]

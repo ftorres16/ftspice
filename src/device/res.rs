@@ -158,6 +158,24 @@ mod tests {
     }
 
     #[test]
+    fn test_undo_linear_stamp() {
+        let res = Res {
+            name: String::from("R1"),
+            nodes: vec![String::from("1"), String::from("2")],
+            val: 1e3,
+        };
+        let nodes = parse_res(&res);
+        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
+        let mut b: Vec<f64> = vec![0.0; 3];
+
+        res.linear_stamp(&nodes, &mut a, &mut b);
+        res.undo_linear_stamp(&nodes, &mut a, &mut b);
+
+        assert_eq!(a, vec![vec![0.0; 3]; 3]);
+        assert_eq!(b, vec![0.0; 3]);
+    }
+
+    #[test]
     fn test_count_nonlinear_funcs() {
         let res = Res {
             name: String::from("R1"),
