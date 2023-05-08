@@ -1,10 +1,11 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use crate::device;
+use crate::node;
 
 pub fn load(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::RowType>,
+    nodes: &HashMap<String, node::MNANode>,
     a: &mut Vec<Vec<f64>>,
     b: &mut Vec<f64>,
 ) {
@@ -20,16 +21,16 @@ pub fn load(
 
 fn load_vdd(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::RowType>,
+    nodes: &HashMap<String, node::MNANode>,
     a: &mut Vec<Vec<f64>>,
     b: &mut Vec<f64>,
 ) {
-    let vneg_idx = nodes.keys().position(|x| x == &elem.nodes[0]);
-    let vpos_idx = nodes.keys().position(|x| x == &elem.nodes[1]);
+    let vneg_idx = nodes.get(&elem.nodes[0]).map(|x| x.idx);
+    let vpos_idx = nodes.get(&elem.nodes[1]).map(|x| x.idx);
     let is_idx = nodes
-        .keys()
-        .position(|x| x == &elem.name)
-        .expect("Couldn't find matrix entry for source.");
+        .get(&elem.name)
+        .expect("Couldn't find matrix entry for source.")
+        .idx;
 
     b[is_idx] += elem.value.expect("Voltage source has no value");
 
@@ -44,36 +45,36 @@ fn load_vdd(
     }
 }
 
-fn load_idd(elem: &device::SpiceElem, nodes: &BTreeMap<String, device::RowType>, b: &mut Vec<f64>) {
-    let vneg_idx = nodes.keys().position(|x| x == &elem.nodes[0]);
-    let vpos_idx = nodes.keys().position(|x| x == &elem.nodes[1]);
+fn load_idd(elem: &device::SpiceElem, nodes: &HashMap<String, node::MNANode>, b: &mut Vec<f64>) {
+    let vneg_node = nodes.get(&elem.nodes[0]).map(|x| x.idx);
+    let vpos_node = nodes.get(&elem.nodes[1]).map(|x| x.idx);
     let val = elem.value.expect("Current source has no value");
 
-    if let Some(i) = vpos_idx {
+    if let Some(i) = vpos_node {
         b[i] += val;
     }
-    if let Some(i) = vneg_idx {
+    if let Some(i) = vneg_node {
         b[i] -= val;
     }
 }
 
 fn load_res(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::RowType>,
+    nodes: &HashMap<String, node::MNANode>,
     a: &mut Vec<Vec<f64>>,
 ) {
     let g = 1.0 / elem.value.expect("Res has no value");
 
-    let vneg_idx = nodes.keys().position(|x| x == &elem.nodes[0]);
-    let vpos_idx = nodes.keys().position(|x| x == &elem.nodes[1]);
+    let vneg_node = nodes.get(&elem.nodes[0]).map(|x| x.idx);
+    let vpos_node = nodes.get(&elem.nodes[1]).map(|x| x.idx);
 
-    if let Some(i) = vneg_idx {
+    if let Some(i) = vneg_node {
         a[i][i] += g;
     }
-    if let Some(i) = vpos_idx {
+    if let Some(i) = vpos_node {
         a[i][i] += g;
     }
-    if let (Some(i), Some(j)) = (vpos_idx, vneg_idx) {
+    if let (Some(i), Some(j)) = (vpos_node, vneg_node) {
         a[i][j] -= g;
         a[j][i] -= g;
     }
@@ -91,17 +92,24 @@ mod tests {
             nodes: vec![String::from("0"), String::from("1")],
             value: Some(1e-3),
         };
-        let nodes = BTreeMap::from([
-            (String::from("1"), device::RowType::Voltage),
-            (String::from("V1"), device::RowType::Current),
-        ]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
         let mut b: Vec<f64> = vec![0.0; 2];
 
         load_vdd(&elem, &nodes, &mut a, &mut b);
 
-        assert_eq!(a, [[0.0, 1.0], [1.0, 0.0]]);
-        assert_eq!(b, [0.0, 1e-3]);
+        let n1 = nodes.get("1").unwrap().idx;
+        let v1 = nodes.get("V1").unwrap().idx;
+
+        let mut a_model = vec![vec![0.0; nodes.len()]; nodes.len()];
+        let mut b_model = vec![0.0; nodes.len()];
+        a_model[n1][v1] = 1.0;
+        a_model[v1][n1] = 1.0;
+        b_model[n1] = 0.0;
+        b_model[v1] = 1e-3;
+
+        assert_eq!(a, a_model);
+        assert_eq!(b, b_model);
     }
 
     #[test]
@@ -112,17 +120,23 @@ mod tests {
             nodes: vec![String::from("1"), String::from("0")],
             value: Some(1e-3),
         };
-        let nodes = BTreeMap::from([
-            (String::from("1"), device::RowType::Voltage),
-            (String::from("V1"), device::RowType::Current),
-        ]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
         let mut b: Vec<f64> = vec![0.0; 2];
 
         load_vdd(&elem, &nodes, &mut a, &mut b);
 
-        assert_eq!(a, [[0.0, -1.0], [-1.0, 0.0]]);
-        assert_eq!(b, [0.0, 1e-3]);
+        let n1 = nodes.get("1").unwrap().idx;
+        let v1 = nodes.get("V1").unwrap().idx;
+        let mut a_model = vec![vec![0.0; nodes.len()]; nodes.len()];
+        let mut b_model = vec![0.0; nodes.len()];
+        a_model[n1][v1] = -1.0;
+        a_model[v1][n1] = -1.0;
+        b_model[n1] = 0.0;
+        b_model[v1] = 1e-3;
+
+        assert_eq!(a, a_model);
+        assert_eq!(b, b_model);
     }
 
     #[test]
@@ -133,18 +147,28 @@ mod tests {
             nodes: vec![String::from("1"), String::from("2")],
             value: Some(1e-3),
         };
-        let nodes = BTreeMap::from([
-            (String::from("1"), device::RowType::Voltage),
-            (String::from("2"), device::RowType::Voltage),
-            (String::from("V1"), device::RowType::Current),
-        ]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
         let mut b: Vec<f64> = vec![0.0; 3];
 
         load_vdd(&elem, &nodes, &mut a, &mut b);
 
-        assert_eq!(a, [[0.0, 0.0, -1.0], [0.0, 0.0, 1.0], [-1.0, 1.0, 0.0]]);
-        assert_eq!(b, [0.0, 0.0, 1e-3]);
+        let n1 = nodes.get("1").unwrap().idx;
+        let n2 = nodes.get("2").unwrap().idx;
+        let v1 = nodes.get("V1").unwrap().idx;
+
+        let mut a_model = vec![vec![0.0; nodes.len()]; nodes.len()];
+        let mut b_model = vec![0.0; nodes.len()];
+        a_model[n1][v1] = -1.0;
+        a_model[v1][n1] = -1.0;
+        a_model[n2][v1] = 1.0;
+        a_model[v1][n2] = 1.0;
+        b_model[n1] = 0.0;
+        b_model[n2] = 0.0;
+        b_model[v1] = 1e-3;
+
+        assert_eq!(a, a_model);
+        assert_eq!(b, b_model);
     }
 
     #[test]
@@ -155,7 +179,7 @@ mod tests {
             nodes: vec![String::from("1"), String::from("0")],
             value: Some(1e-3),
         };
-        let nodes = BTreeMap::from([(String::from("1"), device::RowType::Voltage)]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let mut b: Vec<f64> = vec![0.0; 1];
 
         load_idd(&elem, &nodes, &mut b);
@@ -171,7 +195,7 @@ mod tests {
             nodes: vec![String::from("0"), String::from("1")],
             value: Some(1e-3),
         };
-        let nodes = BTreeMap::from([(String::from("1"), device::RowType::Voltage)]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let mut b: Vec<f64> = vec![0.0; 1];
 
         load_idd(&elem, &nodes, &mut b);
@@ -187,15 +211,19 @@ mod tests {
             nodes: vec![String::from("1"), String::from("2")],
             value: Some(1e-3),
         };
-        let nodes = BTreeMap::from([
-            (String::from("1"), device::RowType::Voltage),
-            (String::from("2"), device::RowType::Voltage),
-        ]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let mut b: Vec<f64> = vec![0.0; 2];
 
         load_idd(&elem, &nodes, &mut b);
 
-        assert_eq!(b, [-1e-3, 1e-3]);
+        let n1 = nodes.get("1").unwrap().idx;
+        let n2 = nodes.get("2").unwrap().idx;
+
+        let mut b_model = vec![0.0; nodes.len()];
+        b_model[n1] = -1e-3;
+        b_model[n2] = 1e-3;
+
+        assert_eq!(b, b_model);
     }
 
     #[test]
@@ -206,7 +234,7 @@ mod tests {
             nodes: vec![String::from("0"), String::from("1")],
             value: Some(1e3),
         };
-        let nodes = BTreeMap::from([(String::from("1"), device::RowType::Voltage)]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 1]];
 
         load_res(&elem, &nodes, &mut a);
@@ -222,7 +250,7 @@ mod tests {
             nodes: vec![String::from("1"), String::from("0")],
             value: Some(1e3),
         };
-        let nodes = BTreeMap::from([(String::from("1"), device::RowType::Voltage)]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 1]];
 
         load_res(&elem, &nodes, &mut a);
@@ -238,14 +266,20 @@ mod tests {
             nodes: vec![String::from("1"), String::from("2")],
             value: Some(1e3),
         };
-        let nodes = BTreeMap::from([
-            (String::from("1"), device::RowType::Voltage),
-            (String::from("2"), device::RowType::Voltage),
-        ]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
 
         load_res(&elem, &nodes, &mut a);
 
-        assert_eq!(a, [[1e-3, -1e-3], [-1e-3, 1e-3]]);
+        let n1 = nodes.get("1").unwrap().idx;
+        let n2 = nodes.get("2").unwrap().idx;
+
+        let mut a_model = vec![vec![0.0; nodes.len()]; nodes.len()];
+        a_model[n1][n1] = 1e-3;
+        a_model[n1][n2] = -1e-3;
+        a_model[n2][n1] = -1e-3;
+        a_model[n2][n2] = 1e-3;
+
+        assert_eq!(a, a_model);
     }
 }

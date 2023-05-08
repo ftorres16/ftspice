@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::env;
 
 extern crate pest;
@@ -9,6 +9,7 @@ mod command;
 mod device;
 mod engine;
 mod linear_stamp;
+mod node;
 mod nonlinear_func;
 mod nonlinear_stamp;
 mod parser;
@@ -43,7 +44,7 @@ fn main() {
     }
 }
 
-fn print_headers(nodes: &BTreeMap<String, device::RowType>) {
+fn print_headers(nodes: &HashMap<String, node::MNANode>) {
     println!(
         "n_iters{}",
         nodes.keys().fold(String::new(), |a, b| a + "," + b)
