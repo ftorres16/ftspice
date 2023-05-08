@@ -1,9 +1,14 @@
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
-use crate::device;
+use crate::device::stamp;
+use crate::device::stamp::Stamp;
 
 const GND: &str = "0";
+
+pub struct NodeCollection {
+    data: BTreeMap<String, MNANode>,
+}
 
 #[derive(Debug)]
 pub struct MNANode {
@@ -17,20 +22,15 @@ pub enum NodeType {
     Current,
 }
 
-pub fn parse_elems(elems: &Vec<device::SpiceElem>) -> HashMap<String, MNANode> {
-    let mut nodes = HashMap::new();
+pub fn parse_elems(elems: &Vec<Box<dyn Stamp>>) -> NodeCollection {
+    let mut map = BTreeMap::new();
+
     let v_names = elems
         .iter()
-        .flat_map(|e| e.nodes.iter())
+        .flat_map(|e| e.get_nodes().iter())
         .filter(|n| n != &GND)
-        .collect::<HashSet<_>>();
-    let i_names = elems
-        .iter()
-        .filter(|x| matches!(x.dtype, device::DType::Vdd))
-        .map(|x| &x.name)
-        .collect::<HashSet<_>>();
-
-    nodes.extend(v_names.iter().enumerate().map(|(i, x)| {
+        .collect::<BTreeSet<_>>();
+    map.extend(v_names.iter().enumerate().map(|(i, x)| {
         (
             x.to_string(),
             MNANode {
@@ -39,7 +39,13 @@ pub fn parse_elems(elems: &Vec<device::SpiceElem>) -> HashMap<String, MNANode> {
             },
         )
     }));
-    nodes.extend(i_names.iter().enumerate().map(|(i, x)| {
+
+    let i_names = elems
+        .iter()
+        .filter(|x| matches!(x.gtype(), stamp::GType::G2))
+        .map(|x| x.get_name())
+        .collect::<BTreeSet<_>>();
+    map.extend(i_names.iter().enumerate().map(|(i, x)| {
         (
             x.to_string(),
             MNANode {
@@ -49,5 +55,33 @@ pub fn parse_elems(elems: &Vec<device::SpiceElem>) -> HashMap<String, MNANode> {
         )
     }));
 
-    nodes
+    NodeCollection { data: map }
+}
+
+impl NodeCollection {
+    pub fn new() -> Self {
+        NodeCollection {
+            data: BTreeMap::new(),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    pub fn get_idx(&self, name: &str) -> Option<usize> {
+        self.data.get(name).map(|x| x.idx)
+    }
+
+    pub fn keys(&self) -> impl Iterator<Item = &String> {
+        self.data.keys()
+    }
+
+    pub fn values(&self) -> impl Iterator<Item = &MNANode> {
+        self.data.values()
+    }
+
+    pub fn insert(&mut self, name: &str, node: MNANode) {
+        self.data.insert(name.to_string(), node);
+    }
 }

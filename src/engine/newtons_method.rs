@@ -1,10 +1,7 @@
-use std::collections::HashMap;
-
-use crate::device;
+use crate::device::stamp::Stamp;
 use crate::engine::gauss_lu;
 use crate::engine::linalg;
 use crate::node;
-use crate::nonlinear_stamp;
 
 const MAX_ITERS: u64 = 100;
 
@@ -27,8 +24,8 @@ struct Step {
 }
 
 pub fn solve(
-    nodes: &HashMap<String, node::MNANode>,
-    elems: &Vec<device::SpiceElem>,
+    nodes: &node::NodeCollection,
+    elems: &Vec<Box<dyn Stamp>>,
     x: &mut Vec<f64>,
     a_mat: &Vec<Vec<f64>>,
     b_vec: &Vec<f64>,
@@ -59,7 +56,7 @@ pub fn solve(
         let mut x_proposed = x.clone();
 
         for elem in elems.iter() {
-            nonlinear_stamp::load(&elem, nodes, &x_proposed, &mut jf_mat, &mut b_temp);
+            elem.nonlinear_stamp(&nodes, &x_proposed, &mut jf_mat, &mut b_temp);
         }
 
         gauss_lu::solve(&mut jf_mat, &mut b_temp, &mut x_proposed);
@@ -112,7 +109,7 @@ fn get_err_vec(
     linalg::vec_sub(&f, &b_vec)
 }
 
-fn get_err_norm(nodes: &HashMap<String, node::MNANode>, err_vec: &Vec<f64>) -> Err {
+fn get_err_norm(nodes: &node::NodeCollection, err_vec: &Vec<f64>) -> Err {
     // Use infinity norm
     let mut err = Err { v: 0.0, i: 0.0 };
 
@@ -136,7 +133,7 @@ fn get_err_norm(nodes: &HashMap<String, node::MNANode>, err_vec: &Vec<f64>) -> E
     err
 }
 
-fn get_step_norm(nodes: &HashMap<String, node::MNANode>, step_vec: &Vec<f64>) -> Step {
+fn get_step_norm(nodes: &node::NodeCollection, step_vec: &Vec<f64>) -> Step {
     let err = get_err_norm(nodes, step_vec);
     Step { v: err.v, i: err.i }
 }
@@ -180,29 +177,28 @@ mod tests {
 
     #[test]
     fn test_get_err_norm() {
-        let nodes: HashMap<String, node::MNANode> = HashMap::from([
-            (
-                String::from("1"),
-                node::MNANode {
-                    idx: 0,
-                    ntype: node::NodeType::Voltage,
-                },
-            ),
-            (
-                String::from("2"),
-                node::MNANode {
-                    idx: 1,
-                    ntype: node::NodeType::Voltage,
-                },
-            ),
-            (
-                String::from("3"),
-                node::MNANode {
-                    idx: 2,
-                    ntype: node::NodeType::Current,
-                },
-            ),
-        ]);
+        let mut nodes = node::NodeCollection::new();
+        nodes.insert(
+            "1",
+            node::MNANode {
+                idx: 0,
+                ntype: node::NodeType::Voltage,
+            },
+        );
+        nodes.insert(
+            "2",
+            node::MNANode {
+                idx: 1,
+                ntype: node::NodeType::Voltage,
+            },
+        );
+        nodes.insert(
+            "3",
+            node::MNANode {
+                idx: 2,
+                ntype: node::NodeType::Current,
+            },
+        );
         let err_vec: Vec<f64> = vec![1.0, 1.0, 2.0];
 
         let err = get_err_norm(&nodes, &err_vec);
@@ -213,29 +209,28 @@ mod tests {
 
     #[test]
     fn test_get_step_norm() {
-        let nodes: HashMap<String, node::MNANode> = HashMap::from([
-            (
-                String::from("1"),
-                node::MNANode {
-                    idx: 0,
-                    ntype: node::NodeType::Voltage,
-                },
-            ),
-            (
-                String::from("2"),
-                node::MNANode {
-                    idx: 1,
-                    ntype: node::NodeType::Voltage,
-                },
-            ),
-            (
-                String::from("3"),
-                node::MNANode {
-                    idx: 2,
-                    ntype: node::NodeType::Current,
-                },
-            ),
-        ]);
+        let mut nodes = node::NodeCollection::new();
+        nodes.insert(
+            "1",
+            node::MNANode {
+                idx: 0,
+                ntype: node::NodeType::Voltage,
+            },
+        );
+        nodes.insert(
+            "2",
+            node::MNANode {
+                idx: 1,
+                ntype: node::NodeType::Voltage,
+            },
+        );
+        nodes.insert(
+            "3",
+            node::MNANode {
+                idx: 2,
+                ntype: node::NodeType::Current,
+            },
+        );
         let step_vec: Vec<f64> = vec![1.0, 1.0, 2.0];
 
         let step = get_step_norm(&nodes, &step_vec);
