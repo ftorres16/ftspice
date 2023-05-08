@@ -1,5 +1,5 @@
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
 use crate::device::stamp;
 use crate::device::stamp::Stamp;
@@ -7,7 +7,7 @@ use crate::device::stamp::Stamp;
 const GND: &str = "0";
 
 pub struct NodeCollection {
-    data: HashMap<String, MNANode>,
+    data: BTreeMap<String, MNANode>,
 }
 
 #[derive(Debug)]
@@ -23,13 +23,13 @@ pub enum NodeType {
 }
 
 pub fn parse_elems(elems: &Vec<Box<dyn Stamp>>) -> NodeCollection {
-    let mut map = HashMap::new();
+    let mut map = BTreeMap::new();
 
     let v_names = elems
         .iter()
         .flat_map(|e| e.get_nodes().iter())
         .filter(|n| n != &GND)
-        .collect::<HashSet<_>>();
+        .collect::<BTreeSet<_>>();
     map.extend(v_names.iter().enumerate().map(|(i, x)| {
         (
             x.to_string(),
@@ -44,7 +44,7 @@ pub fn parse_elems(elems: &Vec<Box<dyn Stamp>>) -> NodeCollection {
         .iter()
         .filter(|x| matches!(x.gtype(), stamp::GType::G2))
         .map(|x| x.get_name())
-        .collect::<HashSet<_>>();
+        .collect::<BTreeSet<_>>();
     map.extend(i_names.iter().enumerate().map(|(i, x)| {
         (
             x.to_string(),
@@ -61,7 +61,7 @@ pub fn parse_elems(elems: &Vec<Box<dyn Stamp>>) -> NodeCollection {
 impl NodeCollection {
     pub fn new() -> Self {
         NodeCollection {
-            data: HashMap::new(),
+            data: BTreeMap::new(),
         }
     }
 
