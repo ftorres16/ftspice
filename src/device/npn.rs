@@ -68,38 +68,26 @@ impl Stamp for NPN {
         }
 
         g_vec.push(Box::new(move |x: &Vec<f64>| {
-            let vc = vc_idx.map_or(0.0, |i| x[i]);
-            let vb = vb_idx.map_or(0.0, |i| x[i]);
-            let ve = ve_idx.map_or(0.0, |i| x[i]);
-
             let q = model::Model {
-                vc: vc,
-                vb: vb,
-                ve: ve,
+                vc: vc_idx.map_or(0.0, |i| x[i]),
+                vb: vb_idx.map_or(0.0, |i| x[i]),
+                ve: ve_idx.map_or(0.0, |i| x[i]),
             };
             q.ic()
         }));
         g_vec.push(Box::new(move |x: &Vec<f64>| {
-            let vc = vc_idx.map_or(0.0, |i| x[i]);
-            let vb = vb_idx.map_or(0.0, |i| x[i]);
-            let ve = ve_idx.map_or(0.0, |i| x[i]);
-
             let q = model::Model {
-                vc: vc,
-                vb: vb,
-                ve: ve,
+                vc: vc_idx.map_or(0.0, |i| x[i]),
+                vb: vb_idx.map_or(0.0, |i| x[i]),
+                ve: ve_idx.map_or(0.0, |i| x[i]),
             };
             q.ib()
         }));
         g_vec.push(Box::new(move |x: &Vec<f64>| {
-            let vc = vc_idx.map_or(0.0, |i| x[i]);
-            let vb = vb_idx.map_or(0.0, |i| x[i]);
-            let ve = ve_idx.map_or(0.0, |i| x[i]);
-
             let q = model::Model {
-                vc: vc,
-                vb: vb,
-                ve: ve,
+                vc: vc_idx.map_or(0.0, |i| x[i]),
+                vb: vb_idx.map_or(0.0, |i| x[i]),
+                ve: ve_idx.map_or(0.0, |i| x[i]),
             };
             q.ie()
         }));

@@ -64,17 +64,9 @@ impl Stamp for Diode {
         }
 
         g_vec.push(Box::new(move |x: &Vec<f64>| {
-            let vpos = match vpos_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
-            let vneg = match vneg_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
             let d = model::Model {
-                vpos: vpos,
-                vneg: vneg,
+                vpos: vpos_idx.map_or(0.0, |i| x[i]),
+                vneg: vneg_idx.map_or(0.0, |i| x[i]),
             };
             d.i()
         }));
@@ -90,12 +82,9 @@ impl Stamp for Diode {
         let vpos_idx = nodes.get_idx(&self.nodes[0]);
         let vneg_idx = nodes.get_idx(&self.nodes[1]);
 
-        let vpos = vpos_idx.map_or(0.0, |i| x[i]);
-        let vneg = vneg_idx.map_or(0.0, |i| x[i]);
-
         let d = model::Model {
-            vpos: vpos,
-            vneg: vneg,
+            vpos: vpos_idx.map_or(0.0, |i| x[i]),
+            vneg: vneg_idx.map_or(0.0, |i| x[i]),
         };
         let g_eq = d.g_eq();
         let i_eq = d.i_eq();
