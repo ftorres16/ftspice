@@ -1,16 +1,15 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::iter::successors;
 
 use crate::command;
 use crate::device;
 use crate::linear_stamp;
+use crate::node;
 use crate::nonlinear_func;
 
 mod gauss_lu;
 mod linalg;
 mod newtons_method;
-
-const GND: &str = "0";
 
 pub struct Engine {
     a: Vec<Vec<f64>>,
@@ -18,32 +17,14 @@ pub struct Engine {
     h: Vec<Vec<f64>>,
     g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
     pub elems: Vec<device::SpiceElem>,
-    pub nodes: BTreeMap<String, device::RowType>,
+    pub nodes: HashMap<String, node::MNANode>,
     pub op_cmd: Option<command::Command>,
     pub dc_cmd: Option<command::Command>,
 }
 
 impl Engine {
     pub fn new(elems: Vec<device::SpiceElem>, mut cmds: Vec<command::Command>) -> Self {
-        let mut nodes = BTreeMap::new();
-
-        nodes.extend(
-            elems
-                .iter()
-                .flat_map(|e| e.nodes.iter())
-                .map(|x| (x.to_string(), device::RowType::Voltage)),
-        );
-        nodes.extend(
-            elems
-                .iter()
-                .filter(|x| matches!(x.dtype, device::DType::Vdd))
-                .map(|x| (x.name.to_string(), device::RowType::Current)),
-        );
-
-        if !nodes.contains_key(GND) {
-            panic!("GND not found!");
-        }
-        nodes.remove(GND);
+        let nodes = node::parse_elems(&elems);
 
         let mut a = vec![vec![0.0; nodes.len()]; nodes.len()];
         let mut b = vec![0.0; nodes.len()];

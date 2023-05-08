@@ -1,10 +1,11 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use crate::device;
+use crate::node;
 
 pub fn load(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::RowType>,
+    nodes: &HashMap<String, node::MNANode>,
     x: &Vec<f64>,
     a: &mut Vec<Vec<f64>>,
     b: &mut Vec<f64>,
@@ -21,13 +22,13 @@ pub fn load(
 
 fn load_diode(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::RowType>,
+    nodes: &HashMap<String, node::MNANode>,
     x: &Vec<f64>,
     a: &mut Vec<Vec<f64>>,
     b: &mut Vec<f64>,
 ) {
-    let vpos_idx = nodes.keys().position(|x| x == &elem.nodes[0]);
-    let vneg_idx = nodes.keys().position(|x| x == &elem.nodes[1]);
+    let vpos_idx = nodes.get(&elem.nodes[0]).map(|x| x.idx);
+    let vneg_idx = nodes.get(&elem.nodes[1]).map(|x| x.idx);
 
     let vpos = match vpos_idx {
         Some(i) => x[i],
@@ -61,14 +62,14 @@ fn load_diode(
 
 fn load_npn(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::RowType>,
+    nodes: &HashMap<String, node::MNANode>,
     x: &Vec<f64>,
     a: &mut Vec<Vec<f64>>,
     b: &mut Vec<f64>,
 ) {
-    let vc_idx = nodes.keys().position(|x| x == &elem.nodes[0]);
-    let vb_idx = nodes.keys().position(|x| x == &elem.nodes[1]);
-    let ve_idx = nodes.keys().position(|x| x == &elem.nodes[2]);
+    let vc_idx = nodes.get(&elem.nodes[0]).map(|x| x.idx);
+    let vb_idx = nodes.get(&elem.nodes[1]).map(|x| x.idx);
+    let ve_idx = nodes.get(&elem.nodes[2]).map(|x| x.idx);
 
     let vc = match vc_idx {
         Some(i) => x[i],
@@ -124,14 +125,14 @@ fn load_npn(
 
 fn load_nmos(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::RowType>,
+    nodes: &HashMap<String, node::MNANode>,
     x: &Vec<f64>,
     a: &mut Vec<Vec<f64>>,
     b: &mut Vec<f64>,
 ) {
-    let mut vd_idx = nodes.keys().position(|x| x == &elem.nodes[0]);
-    let vg_idx = nodes.keys().position(|x| x == &elem.nodes[1]);
-    let mut vs_idx = nodes.keys().position(|x| x == &elem.nodes[2]);
+    let mut vd_idx = nodes.get(&elem.nodes[0]).map(|x| x.idx);
+    let vg_idx = nodes.get(&elem.nodes[1]).map(|x| x.idx);
+    let mut vs_idx = nodes.get(&elem.nodes[2]).map(|x| x.idx);
 
     let mut vd = match vd_idx {
         Some(i) => x[i],
@@ -193,7 +194,7 @@ mod tests {
             nodes: vec![String::from("0"), String::from("1")],
             value: None,
         };
-        let nodes = BTreeMap::from([(String::from("1"), device::RowType::Voltage)]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let x: Vec<f64> = vec![1.0];
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 1]; 1];
         let mut b: Vec<f64> = vec![0.0; 1];
@@ -212,7 +213,7 @@ mod tests {
             nodes: vec![String::from("1"), String::from("0")],
             value: None,
         };
-        let nodes = BTreeMap::from([(String::from("1"), device::RowType::Voltage)]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let x: Vec<f64> = vec![1.0];
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 1]; 1];
         let mut b: Vec<f64> = vec![0.0; 1];
@@ -231,22 +232,22 @@ mod tests {
             nodes: vec![String::from("1"), String::from("2")],
             value: None,
         };
-        let nodes = BTreeMap::from([
-            (String::from("1"), device::RowType::Voltage),
-            (String::from("2"), device::RowType::Voltage),
-        ]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let x: Vec<f64> = vec![1.0, 2.0];
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
         let mut b: Vec<f64> = vec![0.0; 2];
 
         load_diode(&elem, &nodes, &x, &mut a, &mut b);
 
-        assert!(a[0][0] > 0.0);
-        assert!(a[0][1] < 0.0);
-        assert!(a[1][0] < 0.0);
-        assert!(a[1][1] > 0.0);
-        assert!(b[0] > 0.0);
-        assert!(b[1] < 0.0);
+        let n1 = nodes.get("1").unwrap().idx;
+        let n2 = nodes.get("2").unwrap().idx;
+
+        assert!(a[n1][n1] > 0.0);
+        assert!(a[n1][n2] < 0.0);
+        assert!(a[n2][n1] < 0.0);
+        assert!(a[n2][n2] > 0.0);
+        assert!(b[n1] > 0.0);
+        assert!(b[n2] < 0.0);
     }
 
     #[test]
@@ -257,24 +258,28 @@ mod tests {
             nodes: vec![String::from("1"), String::from("2"), String::from("3")],
             value: None,
         };
-        let nodes = BTreeMap::from([
-            (String::from("1"), device::RowType::Voltage),
-            (String::from("2"), device::RowType::Voltage),
-            (String::from("3"), device::RowType::Voltage),
-        ]);
-        let x: Vec<f64> = vec![2.0, 1.0, 0.0];
+        let nodes = node::parse_elems(&vec![elem.clone()]);
+
+        let n1 = nodes.get("1").unwrap().idx;
+        let n2 = nodes.get("2").unwrap().idx;
+        let n3 = nodes.get("3").unwrap().idx;
+
+        let mut x: Vec<f64> = vec![0.0; 3];
+        x[n1] = 2.0;
+        x[n2] = 1.0;
+        x[n3] = 0.0;
+
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
         let mut b: Vec<f64> = vec![0.0; 3];
 
         load_npn(&elem, &nodes, &x, &mut a, &mut b);
 
-        assert!(a[0][0] > 0.0);
-        assert!(a[1][1] > 0.0);
-        assert!(a[2][2] > 0.0);
-        println!("{:?}", b);
-        assert!(b[0] > 0.0);
-        assert!(b[1] > 0.0);
-        assert!(b[2] < 0.0);
+        assert!(a[n1][n1] > 0.0);
+        assert!(a[n2][n2] > 0.0);
+        assert!(a[n3][n3] > 0.0);
+        assert!(b[n1] > 0.0);
+        assert!(b[n2] > 0.0);
+        assert!(b[n3] < 0.0);
     }
 
     #[test]
@@ -285,27 +290,32 @@ mod tests {
             nodes: vec![String::from("1"), String::from("2"), String::from("3")],
             value: None,
         };
-        let nodes = BTreeMap::from([
-            (String::from("1"), device::RowType::Voltage),
-            (String::from("2"), device::RowType::Voltage),
-            (String::from("3"), device::RowType::Voltage),
-        ]);
-        let x: Vec<f64> = vec![2.0, 1.0, 0.0];
+        let nodes = node::parse_elems(&vec![elem.clone()]);
+
+        let n1 = nodes.get("1").unwrap().idx;
+        let n2 = nodes.get("2").unwrap().idx;
+        let n3 = nodes.get("3").unwrap().idx;
+
+        let mut x: Vec<f64> = vec![0.0; 3];
+        x[n1] = 2.0;
+        x[n2] = 1.0;
+        x[n3] = 0.0;
+
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
         let mut b: Vec<f64> = vec![0.0; 3];
 
         load_nmos(&elem, &nodes, &x, &mut a, &mut b);
 
-        assert!(a[0][0] > 0.0);
-        assert!(a[0][1] > 0.0);
-        assert!(a[0][2] < 0.0);
-        assert_eq!(a[1], [0.0, 0.0, 0.0]);
-        assert!(a[2][0] < 0.0);
-        assert!(a[2][1] < 0.0);
-        assert!(a[2][2] > 0.0);
+        assert!(a[n1][n1] > 0.0);
+        assert!(a[n1][n2] > 0.0);
+        assert!(a[n1][n3] < 0.0);
+        assert_eq!(a[n2], [0.0, 0.0, 0.0]);
+        assert!(a[n3][n1] < 0.0);
+        assert!(a[n3][n2] < 0.0);
+        assert!(a[n3][n3] > 0.0);
 
-        assert!(b[0] > 0.0);
-        assert_eq!(b[1], 0.0);
-        assert!(b[2] < 0.0);
+        assert!(b[n1] > 0.0);
+        assert_eq!(b[n2], 0.0);
+        assert!(b[n3] < 0.0);
     }
 }

@@ -1,8 +1,9 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use crate::device;
 use crate::engine::gauss_lu;
 use crate::engine::linalg;
+use crate::node;
 use crate::nonlinear_stamp;
 
 const MAX_ITERS: u64 = 100;
@@ -26,7 +27,7 @@ struct Step {
 }
 
 pub fn solve(
-    nodes: &BTreeMap<String, device::RowType>,
+    nodes: &HashMap<String, node::MNANode>,
     elems: &Vec<device::SpiceElem>,
     x: &mut Vec<f64>,
     a_mat: &Vec<Vec<f64>>,
@@ -111,18 +112,20 @@ fn get_err_vec(
     linalg::vec_sub(&f, &b_vec)
 }
 
-fn get_err_norm(nodes: &BTreeMap<String, device::RowType>, err_vec: &Vec<f64>) -> Err {
+fn get_err_norm(nodes: &HashMap<String, node::MNANode>, err_vec: &Vec<f64>) -> Err {
     // Use infinity norm
     let mut err = Err { v: 0.0, i: 0.0 };
 
-    for (node_type, err_item) in nodes.values().zip(err_vec) {
-        match node_type {
-            device::RowType::Voltage => {
+    for node in nodes.values() {
+        let err_item = err_vec[node.idx];
+
+        match node.ntype {
+            node::NodeType::Voltage => {
                 if err_item.abs() > err.v {
                     err.v = err_item.abs();
                 }
             }
-            device::RowType::Current => {
+            node::NodeType::Current => {
                 if err_item.abs() > err.i {
                     err.i = err_item.abs();
                 }
@@ -133,7 +136,7 @@ fn get_err_norm(nodes: &BTreeMap<String, device::RowType>, err_vec: &Vec<f64>) -
     err
 }
 
-fn get_step_norm(nodes: &BTreeMap<String, device::RowType>, step_vec: &Vec<f64>) -> Step {
+fn get_step_norm(nodes: &HashMap<String, node::MNANode>, step_vec: &Vec<f64>) -> Step {
     let err = get_err_norm(nodes, step_vec);
     Step { v: err.v, i: err.i }
 }
@@ -177,10 +180,28 @@ mod tests {
 
     #[test]
     fn test_get_err_norm() {
-        let nodes: BTreeMap<String, device::RowType> = BTreeMap::from([
-            (String::from("1"), device::RowType::Voltage),
-            (String::from("2"), device::RowType::Voltage),
-            (String::from("3"), device::RowType::Current),
+        let nodes: HashMap<String, node::MNANode> = HashMap::from([
+            (
+                String::from("1"),
+                node::MNANode {
+                    idx: 0,
+                    ntype: node::NodeType::Voltage,
+                },
+            ),
+            (
+                String::from("2"),
+                node::MNANode {
+                    idx: 1,
+                    ntype: node::NodeType::Voltage,
+                },
+            ),
+            (
+                String::from("3"),
+                node::MNANode {
+                    idx: 2,
+                    ntype: node::NodeType::Current,
+                },
+            ),
         ]);
         let err_vec: Vec<f64> = vec![1.0, 1.0, 2.0];
 
@@ -192,10 +213,28 @@ mod tests {
 
     #[test]
     fn test_get_step_norm() {
-        let nodes: BTreeMap<String, device::RowType> = BTreeMap::from([
-            (String::from("1"), device::RowType::Voltage),
-            (String::from("2"), device::RowType::Voltage),
-            (String::from("3"), device::RowType::Current),
+        let nodes: HashMap<String, node::MNANode> = HashMap::from([
+            (
+                String::from("1"),
+                node::MNANode {
+                    idx: 0,
+                    ntype: node::NodeType::Voltage,
+                },
+            ),
+            (
+                String::from("2"),
+                node::MNANode {
+                    idx: 1,
+                    ntype: node::NodeType::Voltage,
+                },
+            ),
+            (
+                String::from("3"),
+                node::MNANode {
+                    idx: 2,
+                    ntype: node::NodeType::Current,
+                },
+            ),
         ]);
         let step_vec: Vec<f64> = vec![1.0, 1.0, 2.0];
 

@@ -1,6 +1,7 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use crate::device;
+use crate::node;
 
 pub fn count(elem: &device::SpiceElem) -> usize {
     match elem.dtype {
@@ -15,7 +16,7 @@ pub fn count(elem: &device::SpiceElem) -> usize {
 
 pub fn load(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::RowType>,
+    nodes: &HashMap<String, node::MNANode>,
     h_mat: &mut Vec<Vec<f64>>,
     g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
 ) {
@@ -31,12 +32,12 @@ pub fn load(
 
 fn load_diode(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::RowType>,
+    nodes: &HashMap<String, node::MNANode>,
     h_mat: &mut Vec<Vec<f64>>,
     g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
 ) {
-    let vpos_idx = nodes.keys().position(|x| x == &elem.nodes[0]);
-    let vneg_idx = nodes.keys().position(|x| x == &elem.nodes[1]);
+    let vpos_idx = nodes.get(&elem.nodes[0]).map(|x| x.idx);
+    let vneg_idx = nodes.get(&elem.nodes[1]).map(|x| x.idx);
 
     if let Some(i) = vpos_idx {
         h_mat[i][g_vec.len()] = 1.0;
@@ -64,13 +65,13 @@ fn load_diode(
 
 fn load_npn(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::RowType>,
+    nodes: &HashMap<String, node::MNANode>,
     h_mat: &mut Vec<Vec<f64>>,
     g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
 ) {
-    let vc_idx = nodes.keys().position(|x| x == &elem.nodes[0]);
-    let vb_idx = nodes.keys().position(|x| x == &elem.nodes[1]);
-    let ve_idx = nodes.keys().position(|x| x == &elem.nodes[2]);
+    let vc_idx = nodes.get(&elem.nodes[0]).map(|x| x.idx);
+    let vb_idx = nodes.get(&elem.nodes[1]).map(|x| x.idx);
+    let ve_idx = nodes.get(&elem.nodes[2]).map(|x| x.idx);
 
     if let Some(i) = vc_idx {
         h_mat[i][g_vec.len()] = 1.0;
@@ -149,13 +150,13 @@ fn load_npn(
 
 fn load_nmos(
     elem: &device::SpiceElem,
-    nodes: &BTreeMap<String, device::RowType>,
+    nodes: &HashMap<String, node::MNANode>,
     h_mat: &mut Vec<Vec<f64>>,
     g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
 ) {
-    let vd_idx = nodes.keys().position(|x| x == &elem.nodes[0]);
-    let vg_idx = nodes.keys().position(|x| x == &elem.nodes[1]);
-    let vs_idx = nodes.keys().position(|x| x == &elem.nodes[2]);
+    let vd_idx = nodes.get(&elem.nodes[0]).map(|x| x.idx);
+    let vg_idx = nodes.get(&elem.nodes[1]).map(|x| x.idx);
+    let vs_idx = nodes.get(&elem.nodes[2]).map(|x| x.idx);
 
     if let Some(i) = vd_idx {
         h_mat[i][g_vec.len()] = 1.0;
@@ -256,7 +257,7 @@ mod tests {
             nodes: vec![String::from("0"), String::from("1")],
             value: None,
         };
-        let nodes = BTreeMap::from([(String::from("1"), device::RowType::Voltage)]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let mut h: Vec<Vec<f64>> = vec![vec![0.0; 1]; 1];
         let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
 
@@ -277,7 +278,7 @@ mod tests {
             nodes: vec![String::from("1"), String::from("0")],
             value: None,
         };
-        let nodes = BTreeMap::from([(String::from("1"), device::RowType::Voltage)]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let mut h: Vec<Vec<f64>> = vec![vec![0.0; 1]; 1];
         let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
 
@@ -298,19 +299,26 @@ mod tests {
             nodes: vec![String::from("1"), String::from("2")],
             value: None,
         };
-        let nodes = BTreeMap::from([
-            (String::from("1"), device::RowType::Voltage),
-            (String::from("2"), device::RowType::Voltage),
-        ]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let mut h: Vec<Vec<f64>> = vec![vec![0.0; 1]; 2];
         let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
 
         load_diode(&elem, &nodes, &mut h, &mut g);
 
-        assert_eq!(h, [[1.0], [-1.0]]);
+        let n1 = nodes.get("1").unwrap().idx;
+        let n2 = nodes.get("2").unwrap().idx;
+
+        let mut h_model = vec![vec![0.0; 1]; 2];
+        h_model[n1][0] = 1.0;
+        h_model[n2][0] = -1.0;
+
+        assert_eq!(h, h_model);
         assert_eq!(g.len(), 1);
 
-        let x_test: Vec<f64> = vec![1.5, 1.0];
+        let mut x_test: Vec<f64> = vec![0.0; 2];
+        x_test[n1] = 1.5;
+        x_test[n2] = 1.0;
+
         assert!(g[0](&x_test) > 0.0);
     }
 
@@ -322,20 +330,29 @@ mod tests {
             nodes: vec![String::from("1"), String::from("2"), String::from("3")],
             value: None,
         };
-        let nodes = BTreeMap::from([
-            (String::from("1"), device::RowType::Voltage),
-            (String::from("2"), device::RowType::Voltage),
-            (String::from("3"), device::RowType::Voltage),
-        ]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let mut h: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
         let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
 
         load_npn(&elem, &nodes, &mut h, &mut g);
 
-        assert_eq!(h, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]);
+        let n1 = nodes.get("1").unwrap().idx;
+        let n2 = nodes.get("2").unwrap().idx;
+        let n3 = nodes.get("3").unwrap().idx;
+
+        let mut h_model = vec![vec![0.0; h[0].len()]; h.len()];
+        h_model[n1][0] = 1.0;
+        h_model[n2][1] = 1.0;
+        h_model[n3][2] = 1.0;
+
+        assert_eq!(h, h_model);
         assert_eq!(g.len(), 3);
 
-        let x_test: Vec<f64> = vec![2.0, 1.0, 0.0];
+        let mut x_test: Vec<f64> = vec![0.0; 3];
+        x_test[n1] = 2.0;
+        x_test[n2] = 1.0;
+        x_test[n3] = 0.0;
+
         assert!(g[0](&x_test) > 0.0);
         assert!(g[1](&x_test) > 0.0);
         assert!(g[2](&x_test) < 0.0);
@@ -349,20 +366,29 @@ mod tests {
             nodes: vec![String::from("1"), String::from("2"), String::from("3")],
             value: None,
         };
-        let nodes = BTreeMap::from([
-            (String::from("1"), device::RowType::Voltage),
-            (String::from("2"), device::RowType::Voltage),
-            (String::from("3"), device::RowType::Voltage),
-        ]);
+        let nodes = node::parse_elems(&vec![elem.clone()]);
         let mut h: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
         let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
 
         load_nmos(&elem, &nodes, &mut h, &mut g);
 
-        assert_eq!(h, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]);
+        let n1 = nodes.get("1").unwrap().idx;
+        let n2 = nodes.get("2").unwrap().idx;
+        let n3 = nodes.get("3").unwrap().idx;
+
+        let mut h_model = vec![vec![0.0; h[0].len()]; h.len()];
+        h_model[n1][0] = 1.0;
+        h_model[n2][1] = 1.0;
+        h_model[n3][2] = 1.0;
+
+        assert_eq!(h, h_model);
         assert_eq!(g.len(), 3);
 
-        let x_test: Vec<f64> = vec![2.0, 1.0, 0.0];
+        let mut x_test: Vec<f64> = vec![0.0; 3];
+        x_test[n1] = 2.0;
+        x_test[n2] = 1.0;
+        x_test[n3] = 0.0;
+
         assert!(g[0](&x_test) > 0.0);
         assert_eq!(g[1](&x_test), 0.0);
         assert!(g[2](&x_test) < 0.0);

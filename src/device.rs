@@ -12,12 +12,6 @@ pub enum DType {
     NMOS,
 }
 
-#[derive(Debug)]
-pub enum RowType {
-    Voltage,
-    Current,
-}
-
 #[derive(Debug, Clone)]
 pub struct SpiceElem {
     pub dtype: DType,
