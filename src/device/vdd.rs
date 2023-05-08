@@ -58,7 +58,7 @@ impl Stamp for Vdd {
             .get_idx(&self.name)
             .expect("Couldn't find node label for source.");
 
-        b[is_idx] += self.val;
+        b[is_idx] -= self.val;
 
         if let Some(i) = vpos_idx {
             a[is_idx][i] -= 1.0;

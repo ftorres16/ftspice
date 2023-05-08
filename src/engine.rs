@@ -109,7 +109,7 @@ impl Engine {
                 &self.nodes,
                 &self.elems,
                 &mut x,
-                &self.a,
+                &a_temp,
                 &b_temp,
                 &self.h,
                 &self.g,
