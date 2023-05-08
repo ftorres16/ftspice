@@ -2,6 +2,7 @@ use std::fs;
 
 use crate::command;
 use crate::device;
+use crate::device::stamp::Stamp;
 
 use pest::iterators::Pair;
 use pest::Parser;
@@ -10,7 +11,7 @@ use pest::Parser;
 #[grammar = "spice.pest"]
 pub struct SpiceParser;
 
-pub fn parse_spice_file(file: &str) -> (Vec<device::SpiceElem>, Vec<command::Command>) {
+pub fn parse_spice_file(file: &str) -> (Vec<Box<dyn Stamp>>, Vec<command::Command>) {
     let mut elems = Vec::new();
     let mut cmds = Vec::new();
 
@@ -26,15 +27,16 @@ pub fn parse_spice_file(file: &str) -> (Vec<device::SpiceElem>, Vec<command::Com
             Rule::node => {
                 let node = line.into_inner().next().unwrap();
 
-                match node.as_rule() {
-                    Rule::r_node => elems.push(parse_res(node)),
-                    Rule::v_node => elems.push(parse_vdd(node)),
-                    Rule::i_node => elems.push(parse_idd(node)),
-                    Rule::dio_node => elems.push(parse_dio(node)),
-                    Rule::bjt_node => elems.push(parse_bjt(node)),
-                    Rule::mos_node => elems.push(parse_mos(node)),
+                let e: Box<dyn Stamp> = match node.as_rule() {
+                    Rule::r_node => Box::new(parse_res(node)),
+                    Rule::v_node => Box::new(parse_vdd(node)),
+                    Rule::i_node => Box::new(parse_idd(node)),
+                    Rule::dio_node => Box::new(parse_dio(node)),
+                    Rule::bjt_node => Box::new(parse_bjt(node)),
+                    Rule::mos_node => Box::new(parse_mos(node)),
                     _ => unreachable!(),
-                }
+                };
+                elems.push(e);
             }
             Rule::command => {
                 let cmd = line.into_inner().next().unwrap();
@@ -53,7 +55,7 @@ pub fn parse_spice_file(file: &str) -> (Vec<device::SpiceElem>, Vec<command::Com
     (elems, cmds)
 }
 
-fn parse_res(node: Pair<Rule>) -> device::SpiceElem {
+fn parse_res(node: Pair<Rule>) -> device::res::Res {
     let mut node_details = node.into_inner();
 
     let name = node_details.next().unwrap().as_str();
@@ -62,78 +64,71 @@ fn parse_res(node: Pair<Rule>) -> device::SpiceElem {
 
     let value = parse_value(node_details.next().unwrap());
 
-    device::SpiceElem {
-        dtype: device::DType::Res,
+    device::res::Res {
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
-        value: Some(value),
+        val: value,
     }
 }
 
-fn parse_vdd(node: Pair<Rule>) -> device::SpiceElem {
+fn parse_vdd(node: Pair<Rule>) -> device::vdd::Vdd {
     let mut node_details = node.into_inner();
     let name = node_details.next().unwrap().as_str();
     let node_1 = node_details.next().unwrap().as_str();
     let node_0 = node_details.next().unwrap().as_str();
-    let value = parse_value(node_details.next().unwrap().into_inner().next().unwrap());
+    let val = parse_value(node_details.next().unwrap().into_inner().next().unwrap());
 
-    device::SpiceElem {
-        dtype: device::DType::Vdd,
+    device::vdd::Vdd {
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
-        value: Some(value),
+        val: val,
     }
 }
 
-fn parse_idd(node: Pair<Rule>) -> device::SpiceElem {
+fn parse_idd(node: Pair<Rule>) -> device::idd::Idd {
     let mut node_details = node.into_inner();
     let name = node_details.next().unwrap().as_str();
     let node_1 = node_details.next().unwrap().as_str();
     let node_0 = node_details.next().unwrap().as_str();
-    let value = parse_value(node_details.next().unwrap().into_inner().next().unwrap());
+    let val = parse_value(node_details.next().unwrap().into_inner().next().unwrap());
 
-    device::SpiceElem {
-        dtype: device::DType::Idd,
+    device::idd::Idd {
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
-        value: Some(value),
+        val: val,
     }
 }
 
-fn parse_dio(node: Pair<Rule>) -> device::SpiceElem {
+fn parse_dio(node: Pair<Rule>) -> device::diode::Diode {
     let mut node_details = node.into_inner();
     let name = node_details.next().unwrap().as_str();
     let node_1 = node_details.next().unwrap().as_str();
     let node_0 = node_details.next().unwrap().as_str();
 
-    device::SpiceElem {
-        dtype: device::DType::Diode,
+    device::diode::Diode {
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
-        value: None,
     }
 }
 
-fn parse_bjt(node: Pair<Rule>) -> device::SpiceElem {
+fn parse_bjt(node: Pair<Rule>) -> device::npn::NPN {
     let mut node_details = node.into_inner();
     let name = node_details.next().unwrap().as_str();
     let node_0 = node_details.next().unwrap().as_str();
     let node_1 = node_details.next().unwrap().as_str();
     let node_2 = node_details.next().unwrap().as_str();
 
-    device::SpiceElem {
-        dtype: device::DType::NPN,
+    device::npn::NPN {
         name: String::from(name),
         nodes: vec![
             String::from(node_0),
             String::from(node_1),
             String::from(node_2),
         ],
-        value: None,
     }
 }
 
-fn parse_mos(node: Pair<Rule>) -> device::SpiceElem {
+fn parse_mos(node: Pair<Rule>) -> device::nmos::NMOS {
     let mut node_details = node.into_inner();
 
     let name = node_details.next().unwrap().as_str();
@@ -141,15 +136,13 @@ fn parse_mos(node: Pair<Rule>) -> device::SpiceElem {
     let node_1 = node_details.next().unwrap().as_str();
     let node_2 = node_details.next().unwrap().as_str();
 
-    device::SpiceElem {
-        dtype: device::DType::NMOS,
+    device::nmos::NMOS {
         name: String::from(name),
         nodes: vec![
             String::from(node_0),
             String::from(node_1),
             String::from(node_2),
         ],
-        value: None,
     }
 }
 
@@ -214,9 +207,9 @@ mod tests {
         let (elems, cmds) = parse_spice_file("test/v_divider.sp");
 
         assert_eq!(elems.len(), 3);
-        assert!(matches!(elems[0].dtype, device::DType::Vdd));
-        assert!(matches!(elems[1].dtype, device::DType::Res));
-        assert!(matches!(elems[2].dtype, device::DType::Res));
+        assert_eq!(elems[0].get_name(), "V1");
+        assert_eq!(elems[1].get_name(), "R12");
+        assert_eq!(elems[2].get_name(), "R20");
 
         assert_eq!(cmds.len(), 1);
         assert!(matches!(cmds[0], command::Command::Op));
@@ -227,22 +220,22 @@ mod tests {
         let (elems, cmds) = parse_spice_file("test/i_divider.sp");
 
         assert_eq!(elems.len(), 3);
-        assert!(matches!(elems[0].dtype, device::DType::Idd));
-        assert!(matches!(elems[1].dtype, device::DType::Res));
-        assert!(matches!(elems[2].dtype, device::DType::Res));
+        assert_eq!(elems[0].get_name(), "I1");
+        assert_eq!(elems[1].get_name(), "R10a");
+        assert_eq!(elems[2].get_name(), "R10b");
 
         assert_eq!(cmds.len(), 1);
         assert!(matches!(cmds[0], command::Command::Op));
     }
 
     #[test]
-    fn parse_spice_filie_r_d_direct() {
+    fn parse_spice_file_r_d_direct() {
         let (elems, cmds) = parse_spice_file("test/r_d_direct.sp");
 
         assert_eq!(elems.len(), 3);
-        assert!(matches!(elems[0].dtype, device::DType::Vdd));
-        assert!(matches!(elems[1].dtype, device::DType::Res));
-        assert!(matches!(elems[2].dtype, device::DType::Diode));
+        assert_eq!(elems[0].get_name(), "V1");
+        assert_eq!(elems[1].get_name(), "R12");
+        assert_eq!(elems[2].get_name(), "D20");
 
         assert_eq!(cmds.len(), 1);
         assert!(matches!(cmds[0], command::Command::Op));
@@ -253,11 +246,11 @@ mod tests {
         let (elems, cmds) = parse_spice_file("test/npn_test.sp");
 
         assert_eq!(elems.len(), 5);
-        assert!(matches!(elems[0].dtype, device::DType::Vdd));
-        assert!(matches!(elems[1].dtype, device::DType::Vdd));
-        assert!(matches!(elems[2].dtype, device::DType::Res));
-        assert!(matches!(elems[3].dtype, device::DType::Res));
-        assert!(matches!(elems[4].dtype, device::DType::NPN));
+        assert_eq!(elems[0].get_name(), "V01");
+        assert_eq!(elems[1].get_name(), "V02");
+        assert_eq!(elems[2].get_name(), "R23");
+        assert_eq!(elems[3].get_name(), "R14");
+        assert_eq!(elems[4].get_name(), "Q310");
 
         assert_eq!(cmds.len(), 1);
         assert!(matches!(cmds[0], command::Command::Op));
@@ -268,10 +261,10 @@ mod tests {
         let (elems, cmds) = parse_spice_file("test/nmos_test.sp");
 
         assert_eq!(elems.len(), 4);
-        assert!(matches!(elems[0].dtype, device::DType::Vdd));
-        assert!(matches!(elems[1].dtype, device::DType::Vdd));
-        assert!(matches!(elems[2].dtype, device::DType::Res));
-        assert!(matches!(elems[3].dtype, device::DType::NMOS));
+        assert_eq!(elems[0].get_name(), "V01");
+        assert_eq!(elems[1].get_name(), "V02");
+        assert_eq!(elems[2].get_name(), "R23");
+        assert_eq!(elems[3].get_name(), "M310");
 
         assert_eq!(cmds.len(), 1);
         assert!(matches!(cmds[0], command::Command::Op));
@@ -282,9 +275,9 @@ mod tests {
         let (elems, cmds) = parse_spice_file("test/v_divider_sweep.sp");
 
         assert_eq!(elems.len(), 3);
-        assert!(matches!(elems[0].dtype, device::DType::Vdd));
-        assert!(matches!(elems[1].dtype, device::DType::Res));
-        assert!(matches!(elems[2].dtype, device::DType::Res));
+        assert_eq!(elems[0].get_name(), "V1");
+        assert_eq!(elems[1].get_name(), "R12");
+        assert_eq!(elems[2].get_name(), "R20");
 
         assert_eq!(cmds.len(), 2);
         assert!(matches!(cmds[0], command::Command::Op));
@@ -296,9 +289,9 @@ mod tests {
         let (elems, cmds) = parse_spice_file("test/i_divider_sweep.sp");
 
         assert_eq!(elems.len(), 3);
-        assert!(matches!(elems[0].dtype, device::DType::Idd));
-        assert!(matches!(elems[1].dtype, device::DType::Res));
-        assert!(matches!(elems[2].dtype, device::DType::Res));
+        assert_eq!(elems[0].get_name(), "I1");
+        assert_eq!(elems[1].get_name(), "R10a");
+        assert_eq!(elems[2].get_name(), "R10b");
 
         assert_eq!(cmds.len(), 2);
         assert!(matches!(cmds[0], command::Command::Op));
@@ -313,10 +306,9 @@ mod tests {
             .unwrap();
         let elem = parse_res(pair);
 
-        assert!(matches!(elem.dtype, device::DType::Res));
         assert_eq!(elem.name, "R1");
         assert_eq!(elem.nodes, ["1", "0"]);
-        assert_eq!(elem.value, Some(2.2e3));
+        assert_eq!(elem.val, 2.2e3);
     }
 
     #[test]
@@ -327,10 +319,9 @@ mod tests {
             .unwrap();
         let elem = parse_vdd(pair);
 
-        assert!(matches!(elem.dtype, device::DType::Vdd));
         assert_eq!(elem.name, "V1");
         assert_eq!(elem.nodes, ["0", "1"]);
-        assert_eq!(elem.value, Some(4.0));
+        assert_eq!(elem.val, 4.0);
     }
 
     #[test]
@@ -341,10 +332,8 @@ mod tests {
             .unwrap();
         let elem = parse_dio(pair);
 
-        assert!(matches!(elem.dtype, device::DType::Diode));
         assert_eq!(elem.name, "D1");
         assert_eq!(elem.nodes, ["0", "1"]);
-        assert_eq!(elem.value, None);
     }
 
     #[test]
@@ -355,10 +344,8 @@ mod tests {
             .unwrap();
         let elem = parse_bjt(pair);
 
-        assert!(matches!(elem.dtype, device::DType::NPN));
         assert_eq!(elem.name, "Q1");
         assert_eq!(elem.nodes, ["1", "2", "3"]);
-        assert_eq!(elem.value, None);
     }
 
     #[test]
@@ -369,10 +356,8 @@ mod tests {
             .unwrap();
         let elem = parse_mos(pair);
 
-        assert!(matches!(elem.dtype, device::DType::NMOS));
         assert_eq!(elem.name, "M1");
         assert_eq!(elem.nodes, ["1", "2", "3"]);
-        assert_eq!(elem.value, None);
     }
 
     #[test]

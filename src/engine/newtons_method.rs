@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
-use crate::device;
+use crate::device::stamp::Stamp;
 use crate::engine::gauss_lu;
 use crate::engine::linalg;
 use crate::node;
-use crate::nonlinear_stamp;
 
 const MAX_ITERS: u64 = 100;
 
@@ -28,7 +27,7 @@ struct Step {
 
 pub fn solve(
     nodes: &HashMap<String, node::MNANode>,
-    elems: &Vec<device::SpiceElem>,
+    elems: &Vec<Box<dyn Stamp>>,
     x: &mut Vec<f64>,
     a_mat: &Vec<Vec<f64>>,
     b_vec: &Vec<f64>,
@@ -59,7 +58,7 @@ pub fn solve(
         let mut x_proposed = x.clone();
 
         for elem in elems.iter() {
-            nonlinear_stamp::load(&elem, nodes, &x_proposed, &mut jf_mat, &mut b_temp);
+            elem.nonlinear_stamp(&nodes, &x_proposed, &mut jf_mat, &mut b_temp);
         }
 
         gauss_lu::solve(&mut jf_mat, &mut b_temp, &mut x_proposed);

@@ -2,10 +2,8 @@ use std::collections::HashMap;
 use std::iter::successors;
 
 use crate::command;
-use crate::device;
-use crate::linear_stamp;
+use crate::device::stamp::Stamp;
 use crate::node;
-use crate::nonlinear_func;
 
 mod gauss_lu;
 mod linalg;
@@ -16,14 +14,14 @@ pub struct Engine {
     b: Vec<f64>,
     h: Vec<Vec<f64>>,
     g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
-    pub elems: Vec<device::SpiceElem>,
+    pub elems: Vec<Box<dyn Stamp>>,
     pub nodes: HashMap<String, node::MNANode>,
     pub op_cmd: Option<command::Command>,
     pub dc_cmd: Option<command::Command>,
 }
 
 impl Engine {
-    pub fn new(elems: Vec<device::SpiceElem>, mut cmds: Vec<command::Command>) -> Self {
+    pub fn new(elems: Vec<Box<dyn Stamp>>, mut cmds: Vec<command::Command>) -> Self {
         let nodes = node::parse_elems(&elems);
 
         let mut a = vec![vec![0.0; nodes.len()]; nodes.len()];
@@ -31,14 +29,14 @@ impl Engine {
 
         let num_nonlinear_funcs = elems
             .iter()
-            .map(|x| nonlinear_func::count(x))
+            .map(|e| e.count_nonlinear_funcs())
             .sum::<usize>();
         let mut h = vec![vec![0.0; num_nonlinear_funcs]; nodes.len()];
         let mut g = Vec::new();
 
         for elem in elems.iter() {
-            linear_stamp::load(&elem, &nodes, &mut a, &mut b);
-            nonlinear_func::load(&elem, &nodes, &mut h, &mut g);
+            elem.linear_stamp(&nodes, &mut a, &mut b);
+            elem.nonlinear_funcs(&nodes, &mut h, &mut g);
         }
 
         let op_cmd = match cmds.iter().position(|x| matches!(x, command::Command::Op)) {
@@ -65,11 +63,11 @@ impl Engine {
         }
     }
 
-    pub fn run_op(&self) -> (u64, Vec<f64>) {
+    pub fn run_op(&mut self) -> (u64, Vec<f64>) {
         let mut x: Vec<f64> = vec![0.0; self.nodes.len()];
         let n_iters = newtons_method::solve(
             &self.nodes,
-            &self.elems,
+            &mut self.elems,
             &mut x,
             &self.a,
             &self.b,
@@ -79,23 +77,23 @@ impl Engine {
         (n_iters, x)
     }
 
-    pub fn run_dc(&self) -> (Vec<u64>, Vec<Vec<f64>>) {
+    pub fn run_dc(&mut self) -> (Vec<u64>, Vec<Vec<f64>>) {
         let dc_params = match &self.dc_cmd {
             Some(command::Command::DC(x)) => x,
             _ => panic!("DC simulation wrongly configured."),
         };
 
-        let mut sweep_elem = self
+        let sweep_idx = self
             .elems
             .iter()
-            .find(|e| e.name == dc_params.source)
-            .expect("Sweep source not found")
-            .to_owned();
+            .position(|e| e.get_name() == dc_params.source)
+            .expect("Sweep source not found");
 
         let mut x_hist = Vec::new();
         let mut n_iters_hist = Vec::new();
 
         let mut x: Vec<f64> = vec![0.0; self.a.len()];
+        let mut a_temp = self.a.clone();
         let mut b_temp = self.b.clone();
 
         let sweep_iter = successors(Some(dc_params.start), |x| {
@@ -104,13 +102,9 @@ impl Engine {
         });
 
         for sweep_val in sweep_iter {
-            // Undo previous stamp, and add new one with the swept value
-            // Ignore `a` updates, connectivity doesn't change
-            let mut a_temp = self.a.clone();
-            sweep_elem.value = Some(-sweep_elem.value.unwrap());
-            linear_stamp::load(&sweep_elem, &self.nodes, &mut a_temp, &mut b_temp);
-            sweep_elem.value = Some(sweep_val);
-            linear_stamp::load(&sweep_elem, &self.nodes, &mut a_temp, &mut b_temp);
+            self.elems[sweep_idx].undo_linear_stamp(&self.nodes, &mut a_temp, &mut b_temp);
+            self.elems[sweep_idx].set_value(sweep_val);
+            self.elems[sweep_idx].linear_stamp(&self.nodes, &mut a_temp, &mut b_temp);
 
             let n_iters = newtons_method::solve(
                 &self.nodes,

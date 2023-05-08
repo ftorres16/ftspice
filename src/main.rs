@@ -8,10 +8,7 @@ extern crate pest_derive;
 mod command;
 mod device;
 mod engine;
-mod linear_stamp;
 mod node;
-mod nonlinear_func;
-mod nonlinear_stamp;
 mod parser;
 
 fn main() {
@@ -23,7 +20,7 @@ fn main() {
 
     let (elems, cmds) = parser::parse_spice_file(file);
 
-    let engine = engine::Engine::new(elems, cmds);
+    let mut engine = engine::Engine::new(elems, cmds);
 
     print_headers(&engine.nodes);
 
