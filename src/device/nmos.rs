@@ -68,18 +68,9 @@ impl Stamp for NMOS {
         }
 
         g_vec.push(Box::new(move |x: &Vec<f64>| {
-            let mut vd = match vd_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
-            let vg = match vg_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
-            let mut vs = match vs_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
+            let mut vd = vd_idx.map_or(0.0, |i| x[i]);
+            let vg = vg_idx.map_or(0.0, |i| x[i]);
+            let mut vs = vs_idx.map_or(0.0, |i| x[i]);
 
             if vs > vd {
                 (vs, vd) = (vd, vs);
@@ -93,18 +84,9 @@ impl Stamp for NMOS {
             m.id()
         }));
         g_vec.push(Box::new(move |x: &Vec<f64>| {
-            let mut vd = match vd_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
-            let vg = match vg_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
-            let mut vs = match vs_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
+            let mut vd = vd_idx.map_or(0.0, |i| x[i]);
+            let vg = vg_idx.map_or(0.0, |i| x[i]);
+            let mut vs = vs_idx.map_or(0.0, |i| x[i]);
 
             if vs > vd {
                 (vs, vd) = (vd, vs);
@@ -118,18 +100,9 @@ impl Stamp for NMOS {
             m.ig()
         }));
         g_vec.push(Box::new(move |x: &Vec<f64>| {
-            let mut vd = match vd_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
-            let vg = match vg_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
-            let mut vs = match vs_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
+            let mut vd = vd_idx.map_or(0.0, |i| x[i]);
+            let vg = vg_idx.map_or(0.0, |i| x[i]);
+            let mut vs = vs_idx.map_or(0.0, |i| x[i]);
 
             if vs > vd {
                 (vs, vd) = (vd, vs);

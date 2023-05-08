@@ -68,18 +68,9 @@ impl Stamp for NPN {
         }
 
         g_vec.push(Box::new(move |x: &Vec<f64>| {
-            let vc = match vc_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
-            let vb = match vb_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
-            let ve = match ve_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
+            let vc = vc_idx.map_or(0.0, |i| x[i]);
+            let vb = vb_idx.map_or(0.0, |i| x[i]);
+            let ve = ve_idx.map_or(0.0, |i| x[i]);
 
             let q = model::Model {
                 vc: vc,
@@ -89,18 +80,9 @@ impl Stamp for NPN {
             q.ic()
         }));
         g_vec.push(Box::new(move |x: &Vec<f64>| {
-            let vc = match vc_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
-            let vb = match vb_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
-            let ve = match ve_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
+            let vc = vc_idx.map_or(0.0, |i| x[i]);
+            let vb = vb_idx.map_or(0.0, |i| x[i]);
+            let ve = ve_idx.map_or(0.0, |i| x[i]);
 
             let q = model::Model {
                 vc: vc,
@@ -110,18 +92,9 @@ impl Stamp for NPN {
             q.ib()
         }));
         g_vec.push(Box::new(move |x: &Vec<f64>| {
-            let vc = match vc_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
-            let vb = match vb_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
-            let ve = match ve_idx {
-                Some(i) => x[i],
-                None => 0.0,
-            };
+            let vc = vc_idx.map_or(0.0, |i| x[i]);
+            let vb = vb_idx.map_or(0.0, |i| x[i]);
+            let ve = ve_idx.map_or(0.0, |i| x[i]);
 
             let q = model::Model {
                 vc: vc,
