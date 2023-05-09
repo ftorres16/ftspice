@@ -24,29 +24,40 @@ pub trait Stamp {
 
     fn set_value(&mut self, value: f64);
 
-    fn linear_stamp(&self, nodes: &node::NodeCollection, a: &mut Vec<Vec<f64>>, b: &mut Vec<f64>);
+    fn linear_stamp(
+        &self,
+        _nodes: &node::NodeCollection,
+        _a: &mut Vec<Vec<f64>>,
+        _b: &mut Vec<f64>,
+    ) {
+    }
 
     fn undo_linear_stamp(
         &self,
-        nodes: &node::NodeCollection,
-        a: &mut Vec<Vec<f64>>,
-        b: &mut Vec<f64>,
-    );
+        _nodes: &node::NodeCollection,
+        _a: &mut Vec<Vec<f64>>,
+        _b: &mut Vec<f64>,
+    ) {
+    }
 
-    fn count_nonlinear_funcs(&self) -> usize;
+    fn count_nonlinear_funcs(&self) -> usize {
+        0
+    }
 
     fn nonlinear_funcs(
         &self,
-        nodes: &node::NodeCollection,
-        h_mat: &mut Vec<Vec<f64>>,
-        g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
-    );
+        _nodes: &node::NodeCollection,
+        _h_mat: &mut Vec<Vec<f64>>,
+        _g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
+    ) {
+    }
 
     fn nonlinear_stamp(
         &self,
-        nodes: &node::NodeCollection,
-        x: &Vec<f64>,
-        a: &mut Vec<Vec<f64>>,
-        b: &mut Vec<f64>,
-    );
+        _nodes: &node::NodeCollection,
+        _x: &Vec<f64>,
+        _a: &mut Vec<Vec<f64>>,
+        _b: &mut Vec<f64>,
+    ) {
+    }
 }

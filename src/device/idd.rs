@@ -59,27 +59,6 @@ impl Stamp for Idd {
             b[i] += val;
         }
     }
-
-    fn count_nonlinear_funcs(&self) -> usize {
-        0
-    }
-
-    fn nonlinear_funcs(
-        &self,
-        _nodes: &node::NodeCollection,
-        _h_mat: &mut Vec<Vec<f64>>,
-        _g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
-    ) {
-    }
-
-    fn nonlinear_stamp(
-        &self,
-        _nodes: &node::NodeCollection,
-        _x: &Vec<f64>,
-        _a: &mut Vec<Vec<f64>>,
-        _b: &mut Vec<f64>,
-    ) {
-    }
 }
 
 #[cfg(test)]

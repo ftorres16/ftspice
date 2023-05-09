@@ -30,22 +30,6 @@ impl Stamp for NPN {
         unimplemented!()
     }
 
-    fn linear_stamp(
-        &self,
-        _nodes: &node::NodeCollection,
-        _a: &mut Vec<Vec<f64>>,
-        _b: &mut Vec<f64>,
-    ) {
-    }
-
-    fn undo_linear_stamp(
-        &self,
-        _nodes: &node::NodeCollection,
-        _a: &mut Vec<Vec<f64>>,
-        _b: &mut Vec<f64>,
-    ) {
-    }
-
     fn count_nonlinear_funcs(&self) -> usize {
         3
     }
