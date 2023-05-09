@@ -107,12 +107,12 @@ fn parse_ind(node: Pair<Rule>) -> device::ind::Ind {
     let name = node_details.next().unwrap().as_str();
     let node_1 = node_details.next().unwrap().as_str();
     let node_0 = node_details.next().unwrap().as_str();
-    let val = parse_value(node_details.next().unwrap().into_inner().next().unwrap());
+    let value = parse_value(node_details.next().unwrap());
 
     device::ind::Ind {
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
-        val: val,
+        val: value,
     }
 }
 
@@ -121,12 +121,12 @@ fn parse_cap(node: Pair<Rule>) -> device::cap::Cap {
     let name = node_details.next().unwrap().as_str();
     let node_1 = node_details.next().unwrap().as_str();
     let node_0 = node_details.next().unwrap().as_str();
-    let val = parse_value(node_details.next().unwrap().into_inner().next().unwrap());
+    let value = parse_value(node_details.next().unwrap());
 
     device::cap::Cap {
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
-        val: val,
+        val: value,
     }
 }
 
@@ -367,6 +367,45 @@ mod tests {
         assert_eq!(elem.name, "V1");
         assert_eq!(elem.nodes, ["0", "1"]);
         assert_eq!(elem.val, 4.0);
+    }
+
+    #[test]
+    fn parse_idd_generic() {
+        let pair = SpiceParser::parse(Rule::i_node, "I1 1 0 4.0mA")
+            .unwrap()
+            .next()
+            .unwrap();
+        let elem = parse_idd(pair);
+
+        assert_eq!(elem.name, "I1");
+        assert_eq!(elem.nodes, ["0", "1"]);
+        assert_eq!(elem.val, 4.0e-3);
+    }
+
+    #[test]
+    fn parse_ind_generic() {
+        let pair = SpiceParser::parse(Rule::ind_node, "L1 1 0 L=1u")
+            .unwrap()
+            .next()
+            .unwrap();
+        let elem = parse_ind(pair);
+
+        assert_eq!(elem.name, "L1");
+        assert_eq!(elem.nodes, ["0", "1"]);
+        assert_eq!(elem.val, 1e-6);
+    }
+
+    #[test]
+    fn parse_cap_generic() {
+        let pair = SpiceParser::parse(Rule::cap_node, "C1 1 0 C=1u")
+            .unwrap()
+            .next()
+            .unwrap();
+        let elem = parse_cap(pair);
+
+        assert_eq!(elem.name, "C1");
+        assert_eq!(elem.nodes, ["0", "1"]);
+        assert_eq!(elem.val, 1e-6);
     }
 
     #[test]
