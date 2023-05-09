@@ -31,6 +31,8 @@ pub fn parse_spice_file(file: &str) -> (Vec<Box<dyn Stamp>>, Vec<command::Comman
                     Rule::r_node => Box::new(parse_res(node)),
                     Rule::v_node => Box::new(parse_vdd(node)),
                     Rule::i_node => Box::new(parse_idd(node)),
+                    Rule::ind_node => Box::new(parse_ind(node)),
+                    Rule::cap_node => Box::new(parse_cap(node)),
                     Rule::dio_node => Box::new(parse_dio(node)),
                     Rule::bjt_node => Box::new(parse_bjt(node)),
                     Rule::mos_node => Box::new(parse_mos(node)),
@@ -44,6 +46,7 @@ pub fn parse_spice_file(file: &str) -> (Vec<Box<dyn Stamp>>, Vec<command::Comman
                 match cmd.as_rule() {
                     Rule::op_cmd => cmds.push(parse_op_cmd()),
                     Rule::dc_cmd => cmds.push(parse_dc_cmd(cmd)),
+                    Rule::tran_cmd => cmds.push(parse_tran_cmd(cmd)),
                     _ => unreachable!(),
                 }
             }
@@ -93,6 +96,34 @@ fn parse_idd(node: Pair<Rule>) -> device::idd::Idd {
     let val = parse_value(node_details.next().unwrap().into_inner().next().unwrap());
 
     device::idd::Idd {
+        name: String::from(name),
+        nodes: vec![String::from(node_0), String::from(node_1)],
+        val: val,
+    }
+}
+
+fn parse_ind(node: Pair<Rule>) -> device::ind::Ind {
+    let mut node_details = node.into_inner();
+    let name = node_details.next().unwrap().as_str();
+    let node_1 = node_details.next().unwrap().as_str();
+    let node_0 = node_details.next().unwrap().as_str();
+    let val = parse_value(node_details.next().unwrap().into_inner().next().unwrap());
+
+    device::ind::Ind {
+        name: String::from(name),
+        nodes: vec![String::from(node_0), String::from(node_1)],
+        val: val,
+    }
+}
+
+fn parse_cap(node: Pair<Rule>) -> device::cap::Cap {
+    let mut node_details = node.into_inner();
+    let name = node_details.next().unwrap().as_str();
+    let node_1 = node_details.next().unwrap().as_str();
+    let node_0 = node_details.next().unwrap().as_str();
+    let val = parse_value(node_details.next().unwrap().into_inner().next().unwrap());
+
+    device::cap::Cap {
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
         val: val,
@@ -160,6 +191,20 @@ fn parse_dc_cmd(cmd: Pair<Rule>) -> command::Command {
 
     command::Command::DC(command::DCParams {
         source: String::from(source),
+        start: start,
+        stop: stop,
+        step: step,
+    })
+}
+
+fn parse_tran_cmd(cmd: Pair<Rule>) -> command::Command {
+    let mut cmd_details = cmd.into_inner();
+
+    let start = parse_value(cmd_details.next().unwrap());
+    let stop = parse_value(cmd_details.next().unwrap());
+    let step = parse_value(cmd_details.next().unwrap());
+
+    command::Command::Tran(command::TranParams {
         start: start,
         stop: stop,
         step: step,

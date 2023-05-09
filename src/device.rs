@@ -1,7 +1,9 @@
 use crate::node;
 
+pub mod cap;
 pub mod diode;
 pub mod idd;
+pub mod ind;
 pub mod nmos;
 pub mod npn;
 pub mod res;

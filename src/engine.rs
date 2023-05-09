@@ -17,6 +17,7 @@ pub struct Engine {
     pub nodes: node::NodeCollection,
     pub op_cmd: Option<command::Command>,
     pub dc_cmd: Option<command::Command>,
+    pub tran_cmd: Option<command::Command>,
 }
 
 impl Engine {
@@ -38,17 +39,18 @@ impl Engine {
             elem.nonlinear_funcs(&nodes, &mut h, &mut g);
         }
 
-        let op_cmd = match cmds.iter().position(|x| matches!(x, command::Command::Op)) {
-            Some(i) => Some(cmds.remove(i)),
-            None => None,
-        };
-        let dc_cmd = match cmds
+        let op_cmd = cmds
+            .iter()
+            .position(|x| matches!(x, command::Command::Op))
+            .map(|i| cmds.remove(i));
+        let dc_cmd = cmds
             .iter()
             .position(|x| matches!(x, command::Command::DC(_)))
-        {
-            Some(i) => Some(cmds.remove(i)),
-            None => None,
-        };
+            .map(|i| cmds.remove(i));
+        let tran_cmd = cmds
+            .iter()
+            .position(|x| matches!(x, command::Command::Tran(_)))
+            .map(|i| cmds.remove(i));
 
         Engine {
             a: a,
@@ -59,6 +61,7 @@ impl Engine {
             nodes: nodes,
             op_cmd: op_cmd,
             dc_cmd: dc_cmd,
+            tran_cmd: tran_cmd,
         }
     }
 
@@ -95,6 +98,8 @@ impl Engine {
         let mut a_temp = self.a.clone();
         let mut b_temp = self.b.clone();
 
+        let val_bkp = self.elems[sweep_idx].get_value();
+
         let sweep_iter = successors(Some(dc_params.start), |x| {
             let next = x + dc_params.step;
             (next < dc_params.stop).then_some(next)
@@ -119,6 +124,12 @@ impl Engine {
             x_hist.push(x.clone());
         }
 
+        self.elems[sweep_idx].set_value(val_bkp);
+
         (n_iters_hist, x_hist)
+    }
+
+    pub fn run_tran(&mut self) -> (Vec<u64>, Vec<f64>, Vec<Vec<f64>>) {
+        todo!()
     }
 }
