@@ -22,6 +22,10 @@ impl Stamp for Vdd {
         stamp::GType::G2
     }
 
+    fn get_value(&self) -> f64 {
+        self.val
+    }
+
     fn set_value(&mut self, value: f64) {
         self.val = value;
     }

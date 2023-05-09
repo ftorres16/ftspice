@@ -13,6 +13,8 @@ pub trait Stamp {
 
     fn gtype(&self) -> GType;
 
+    fn get_value(&self) -> f64;
+
     fn set_value(&mut self, value: f64);
 
     fn linear_stamp(&self, nodes: &node::NodeCollection, a: &mut Vec<Vec<f64>>, b: &mut Vec<f64>);

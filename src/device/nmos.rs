@@ -23,6 +23,10 @@ impl Stamp for NMOS {
         stamp::GType::G1
     }
 
+    fn get_value(&self) -> f64 {
+        unimplemented!()
+    }
+
     fn set_value(&mut self, _value: f64) {
         unimplemented!()
     }
