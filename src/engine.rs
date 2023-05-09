@@ -1,7 +1,7 @@
 use std::iter::successors;
 
 use crate::command;
-use crate::device::stamp::Stamp;
+use crate::device::Stamp;
 use crate::node;
 
 mod gauss_lu;

@@ -1,4 +1,4 @@
-use crate::device::stamp::Stamp;
+use crate::device::Stamp;
 use crate::engine::gauss_lu;
 use crate::engine::linalg;
 use crate::node;

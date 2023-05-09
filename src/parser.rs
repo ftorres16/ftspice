@@ -2,7 +2,7 @@ use std::fs;
 
 use crate::command;
 use crate::device;
-use crate::device::stamp::Stamp;
+use crate::device::Stamp;
 
 use pest::iterators::Pair;
 use pest::Parser;

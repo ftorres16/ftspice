@@ -1,5 +1,4 @@
-use crate::device::stamp;
-use crate::device::stamp::Stamp;
+use crate::device::{GType, Stamp};
 use crate::node;
 
 #[derive(Debug, Clone)]
@@ -18,8 +17,8 @@ impl Stamp for Vdd {
         &self.nodes
     }
 
-    fn gtype(&self) -> stamp::GType {
-        stamp::GType::G2
+    fn gtype(&self) -> GType {
+        GType::G2
     }
 
     fn get_value(&self) -> f64 {

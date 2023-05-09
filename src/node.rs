@@ -1,8 +1,7 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
-use crate::device::stamp;
-use crate::device::stamp::Stamp;
+use crate::device::{GType, Stamp};
 
 const GND: &str = "0";
 
@@ -42,7 +41,7 @@ pub fn parse_elems(elems: &Vec<Box<dyn Stamp>>) -> NodeCollection {
 
     let i_names = elems
         .iter()
-        .filter(|x| matches!(x.gtype(), stamp::GType::G2))
+        .filter(|x| matches!(x.gtype(), GType::G2))
         .map(|x| x.get_name())
         .collect::<BTreeSet<_>>();
     map.extend(i_names.iter().enumerate().map(|(i, x)| {
