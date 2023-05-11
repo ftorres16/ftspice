@@ -6,7 +6,6 @@ use crate::engine::node_vec_norm::NodeVecNorm;
 use crate::node::NodeCollection;
 
 pub const T_STEP_MIN: f64 = 1e-12;
-pub const T_STEP_MAX: f64 = 1e-3;
 
 const TOL_REL: f64 = 0.001;
 const TOL_ABS_V: f64 = 1e-3;
@@ -22,6 +21,7 @@ pub fn step(
     in_src_idx: &usize,
     x_hist: &mut Vec<Vec<f64>>,
     t_hist: &mut Vec<f64>,
+    step_max: &f64,
 ) -> (f64, f64, u64) {
     let mut n_iters = 0;
     let mut h = h.to_owned();
@@ -68,7 +68,7 @@ pub fn step(
 
                 if plte_norm.v < 0.1 * TOL_ABS_V
                     && plte_norm.i < 0.1 * TOL_ABS_A
-                    && h <= T_STEP_MAX / 2.0
+                    && h <= step_max / 2.0
                 {
                     next_h = h * 2.0;
                 } else {

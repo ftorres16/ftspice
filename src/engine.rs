@@ -147,6 +147,7 @@ impl Engine {
                 &in_src_idx,
                 &mut x_hist,
                 &mut t_hist,
+                &tran_params.step,
             );
 
             t += h;
