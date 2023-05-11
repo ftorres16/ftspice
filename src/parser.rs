@@ -91,17 +91,7 @@ fn parse_vdd(node: Pair<Rule>) -> device::vdd::Vdd {
             tran_fn = None;
         }
         Rule::fn_value => {
-            let mut sine_details = val_details.into_inner().next().unwrap().into_inner();
-            let offset = parse_value(sine_details.next().unwrap());
-            let amplitude = parse_value(sine_details.next().unwrap());
-            let freq = parse_value(sine_details.next().unwrap());
-
-            let spice_fn = SpiceFn::Sine(SineParams {
-                offset,
-                amplitude,
-                freq,
-            });
-
+            let spice_fn = parse_spice_fn(val_details.into_inner().next().unwrap());
             val = spice_fn.eval(&0.0).clone();
             tran_fn = Some(spice_fn);
         }
@@ -121,12 +111,29 @@ fn parse_idd(node: Pair<Rule>) -> device::idd::Idd {
     let name = node_details.next().unwrap().as_str();
     let node_1 = node_details.next().unwrap().as_str();
     let node_0 = node_details.next().unwrap().as_str();
-    let val = parse_value(node_details.next().unwrap().into_inner().next().unwrap());
+
+    let val_details = node_details.next().unwrap().into_inner().next().unwrap();
+    let val;
+    let tran_fn;
+
+    match val_details.as_rule() {
+        Rule::i_dc_value => {
+            val = parse_value(val_details.into_inner().next().unwrap());
+            tran_fn = None;
+        }
+        Rule::fn_value => {
+            let spice_fn = parse_spice_fn(val_details.into_inner().next().unwrap());
+            val = spice_fn.eval(&0.0).clone();
+            tran_fn = Some(spice_fn);
+        }
+        _ => unreachable!(),
+    };
 
     device::idd::Idd {
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
-        val: val,
+        val,
+        tran_fn,
     }
 }
 
@@ -238,6 +245,19 @@ fn parse_tran_cmd(cmd: Pair<Rule>) -> command::Command {
         start: start,
         stop: stop,
         step: step,
+    })
+}
+
+fn parse_spice_fn(fn_value: Pair<Rule>) -> SpiceFn {
+    let mut sine_details = fn_value.into_inner();
+    let offset = parse_value(sine_details.next().unwrap());
+    let amplitude = parse_value(sine_details.next().unwrap());
+    let freq = parse_value(sine_details.next().unwrap());
+
+    SpiceFn::Sine(SineParams {
+        offset,
+        amplitude,
+        freq,
     })
 }
 
@@ -456,6 +476,25 @@ mod tests {
         assert_eq!(elem.name, "I1");
         assert_eq!(elem.nodes, ["0", "1"]);
         assert_eq!(elem.val, 4.0e-3);
+    }
+
+    #[test]
+    fn parse_idd_sine() {
+        let pair = SpiceParser::parse(Rule::i_node, "I1 1 0 SIN(0.0 1.0 10k)")
+            .unwrap()
+            .next()
+            .unwrap();
+        let elem = parse_idd(pair);
+
+        assert_eq!(elem.name, "I1");
+        assert_eq!(elem.nodes, ["0", "1"]);
+        assert_eq!(elem.val, 0.0);
+
+        let tran_fn = elem.tran_fn.expect("Tran Fn not set");
+        let SpiceFn::Sine(params) = tran_fn;
+        assert_eq!(params.offset, 0.0);
+        assert_eq!(params.amplitude, 1.0);
+        assert_eq!(params.freq, 10e3);
     }
 
     #[test]

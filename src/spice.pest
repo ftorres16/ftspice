@@ -18,7 +18,8 @@ v_value = { v_dc_value | fn_value }
 v_node = { v_name ~ name ~ name ~ v_value }
 
 i_name = @{ ^"I" ~ name }
-i_value = @{ value ~ ^"A" }
+i_dc_value = @{ value ~ ^"A" }
+i_value = { i_dc_value | fn_value }
 i_node = { i_name ~ name ~ name ~ i_value }
 
 cap_name = @{ ^"C" ~ name }

@@ -38,7 +38,6 @@ pub fn step(
     while !step_accepted {
         for elem in elems.iter_mut() {
             if elem.has_tran() {
-                elem.undo_linear_stamp(&nodes, &mut mna.a, &mut mna.b);
                 elem.eval_tran(&(t + h));
                 elem.linear_stamp(&nodes, &mut mna.a, &mut mna.b);
             }
@@ -81,7 +80,11 @@ pub fn step(
         }
 
         if !step_accepted {
-            for elem in elems.iter() {
+            for elem in elems.iter_mut() {
+                if elem.has_tran() {
+                    elem.undo_linear_stamp(&nodes, &mut mna.a, &mut mna.b);
+                }
+
                 elem.undo_dynamic_stamp(&nodes, &x, &h, &mut mna.a, &mut mna.b);
             }
             state_hist.pop();

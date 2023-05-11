@@ -1,3 +1,4 @@
+use crate::device::spice_fn::SpiceFn;
 use crate::device::{GType, Stamp};
 use crate::node;
 
@@ -6,6 +7,7 @@ pub struct Idd {
     pub name: String,
     pub nodes: Vec<String>,
     pub val: f64,
+    pub tran_fn: Option<SpiceFn>,
 }
 
 impl Stamp for Idd {
@@ -27,6 +29,20 @@ impl Stamp for Idd {
 
     fn set_value(&mut self, value: f64) {
         self.val = value;
+    }
+
+    fn has_tran(&self) -> bool {
+        if let Some(_) = &self.tran_fn {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn eval_tran(&mut self, t: &f64) {
+        if let Some(f) = &self.tran_fn {
+            self.val = f.eval(t);
+        }
     }
 
     fn linear_stamp(&self, nodes: &node::NodeCollection, _a: &mut Vec<Vec<f64>>, b: &mut Vec<f64>) {
@@ -69,13 +85,18 @@ mod tests {
         node::parse_elems(&vec![Box::new(idd.clone())])
     }
 
+    fn test_idd(nodes: &[&str]) -> Idd {
+        Idd {
+            name: String::from("I1"),
+            nodes: nodes.iter().map(|s| s.to_string()).collect(),
+            val: 1e-3,
+            tran_fn: None,
+        }
+    }
+
     #[test]
     fn test_linear_stamp_idd_node_0_gnd() {
-        let idd = Idd {
-            name: String::from("I1"),
-            nodes: vec![String::from("1"), String::from("0")],
-            val: 1e-3,
-        };
+        let idd = test_idd(&["1", "0"]);
         let nodes = parse_idd(&idd);
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 1]; 1];
         let mut b: Vec<f64> = vec![0.0; 1];
@@ -88,11 +109,7 @@ mod tests {
 
     #[test]
     fn test_linear_stamp_idd_node_1_gnd() {
-        let idd = Idd {
-            name: String::from("I1"),
-            nodes: vec![String::from("0"), String::from("1")],
-            val: 1e-3,
-        };
+        let idd = test_idd(&["0", "1"]);
         let nodes = parse_idd(&idd);
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 1]; 1];
         let mut b: Vec<f64> = vec![0.0; 1];
@@ -105,11 +122,7 @@ mod tests {
 
     #[test]
     fn test_linear_stamp_idd_to_nodes() {
-        let idd = Idd {
-            name: String::from("I1"),
-            nodes: vec![String::from("1"), String::from("2")],
-            val: 1e-3,
-        };
+        let idd = test_idd(&["1", "2"]);
         let nodes = parse_idd(&idd);
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
         let mut b: Vec<f64> = vec![0.0; 2];
@@ -129,11 +142,7 @@ mod tests {
 
     #[test]
     fn test_undo_linear_stamp() {
-        let idd = Idd {
-            name: String::from("I1"),
-            nodes: vec![String::from("1"), String::from("2")],
-            val: 1e-3,
-        };
+        let idd = test_idd(&["1", "2"]);
         let nodes = parse_idd(&idd);
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
         let mut b: Vec<f64> = vec![0.0; 2];
@@ -147,11 +156,7 @@ mod tests {
 
     #[test]
     fn test_count_nonlinear_funcs() {
-        let idd = Idd {
-            name: String::from("I1"),
-            nodes: vec![String::from("1"), String::from("2")],
-            val: 1e-3,
-        };
+        let idd = test_idd(&["1", "2"]);
         let nodes = parse_idd(&idd);
         let mut h: Vec<Vec<f64>> = vec![vec![0.0; 1]; 2];
         let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
@@ -163,11 +168,7 @@ mod tests {
 
     #[test]
     fn test_nonlinear_funcs_() {
-        let idd = Idd {
-            name: String::from("I1"),
-            nodes: vec![String::from("1"), String::from("2")],
-            val: 1e-3,
-        };
+        let idd = test_idd(&["1", "2"]);
         let nodes = parse_idd(&idd);
         let mut h: Vec<Vec<f64>> = vec![vec![0.0; 1]; 2];
         let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
@@ -180,11 +181,7 @@ mod tests {
 
     #[test]
     fn test_nonlinear_stamp() {
-        let idd = Idd {
-            name: String::from("I1"),
-            nodes: vec![String::from("1"), String::from("2")],
-            val: 1e-3,
-        };
+        let idd = test_idd(&["1", "2"]);
         let nodes = parse_idd(&idd);
         let x: Vec<f64> = vec![1.0, 2.0];
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
