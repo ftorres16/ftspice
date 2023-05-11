@@ -2,17 +2,19 @@ use std::iter::successors;
 
 use crate::command;
 use crate::device::Stamp;
+use crate::engine::mna::MNA;
+use crate::engine::transient::T_STEP_MIN;
 use crate::node;
 
 mod gauss_lu;
 mod linalg;
+mod mna;
 mod newtons_method;
+mod node_vec_norm;
+mod transient;
 
 pub struct Engine {
-    a: Vec<Vec<f64>>,
-    b: Vec<f64>,
-    h: Vec<Vec<f64>>,
-    g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
+    pub mna: MNA,
     pub elems: Vec<Box<dyn Stamp>>,
     pub nodes: node::NodeCollection,
     pub op_cmd: Option<command::Command>,
@@ -23,20 +25,15 @@ pub struct Engine {
 impl Engine {
     pub fn new(elems: Vec<Box<dyn Stamp>>, mut cmds: Vec<command::Command>) -> Self {
         let nodes = node::parse_elems(&elems);
-
-        let mut a = vec![vec![0.0; nodes.len()]; nodes.len()];
-        let mut b = vec![0.0; nodes.len()];
-
         let num_nonlinear_funcs = elems
             .iter()
             .map(|e| e.count_nonlinear_funcs())
             .sum::<usize>();
-        let mut h = vec![vec![0.0; num_nonlinear_funcs]; nodes.len()];
-        let mut g = Vec::new();
+        let mut mna = MNA::new(nodes.len(), num_nonlinear_funcs);
 
         for elem in elems.iter() {
-            elem.linear_stamp(&nodes, &mut a, &mut b);
-            elem.nonlinear_funcs(&nodes, &mut h, &mut g);
+            elem.linear_stamp(&nodes, &mut mna.a, &mut mna.b);
+            elem.nonlinear_funcs(&nodes, &mut mna.h, &mut mna.g);
         }
 
         let op_cmd = cmds
@@ -53,10 +50,7 @@ impl Engine {
             .map(|i| cmds.remove(i));
 
         Engine {
-            a: a,
-            b: b,
-            h: h,
-            g: g,
+            mna: mna,
             elems: elems,
             nodes: nodes,
             op_cmd: op_cmd,
@@ -66,16 +60,8 @@ impl Engine {
     }
 
     pub fn run_op(&mut self) -> (u64, Vec<f64>) {
-        let mut x: Vec<f64> = vec![0.0; self.nodes.len()];
-        let n_iters = newtons_method::solve(
-            &self.nodes,
-            &mut self.elems,
-            &mut x,
-            &self.a,
-            &self.b,
-            &self.h,
-            &self.g,
-        );
+        let mut x = self.mna.get_x();
+        let n_iters = newtons_method::solve(&self.nodes, &self.elems, &mut x, &self.mna);
         (n_iters, x)
     }
 
@@ -94,10 +80,10 @@ impl Engine {
         let mut x_hist = Vec::new();
         let mut n_iters_hist = Vec::new();
 
-        let mut x: Vec<f64> = vec![0.0; self.a.len()];
-        let mut a_temp = self.a.clone();
-        let mut b_temp = self.b.clone();
+        let mut x = self.mna.get_x();
 
+        let a_bkp = self.mna.a.clone();
+        let b_bkp = self.mna.b.clone();
         let val_bkp = self.elems[sweep_idx].get_value();
 
         let sweep_iter = successors(Some(dc_params.start), |x| {
@@ -106,30 +92,75 @@ impl Engine {
         });
 
         for sweep_val in sweep_iter {
-            self.elems[sweep_idx].undo_linear_stamp(&self.nodes, &mut a_temp, &mut b_temp);
+            self.elems[sweep_idx].undo_linear_stamp(&self.nodes, &mut self.mna.a, &mut self.mna.b);
             self.elems[sweep_idx].set_value(sweep_val);
-            self.elems[sweep_idx].linear_stamp(&self.nodes, &mut a_temp, &mut b_temp);
+            self.elems[sweep_idx].linear_stamp(&self.nodes, &mut self.mna.a, &mut self.mna.b);
 
-            let n_iters = newtons_method::solve(
-                &self.nodes,
-                &self.elems,
-                &mut x,
-                &a_temp,
-                &b_temp,
-                &self.h,
-                &self.g,
-            );
+            let n_iters = newtons_method::solve(&self.nodes, &self.elems, &mut x, &self.mna);
 
             n_iters_hist.push(n_iters);
             x_hist.push(x.clone());
         }
 
+        self.mna.a = a_bkp;
+        self.mna.b = b_bkp;
         self.elems[sweep_idx].set_value(val_bkp);
 
         (n_iters_hist, x_hist)
     }
 
     pub fn run_tran(&mut self) -> (Vec<u64>, Vec<f64>, Vec<Vec<f64>>) {
-        todo!()
+        let tran_params = match &self.tran_cmd {
+            Some(command::Command::Tran(x)) => x.to_owned(),
+            _ => panic!("DC simulation wrongly configured."),
+        };
+
+        let (_, mut x) = self.run_op();
+
+        for elem in self.elems.iter_mut() {
+            elem.init_state(&self.nodes, &x);
+        }
+
+        let mut n_iters_hist = Vec::new();
+        let mut t_hist = Vec::new();
+        let mut x_hist = Vec::new();
+
+        let in_src_idx = self
+            .elems
+            .iter()
+            .position(|x| x.get_name().starts_with("V"))
+            .expect("No V source found");
+
+        let mut t = tran_params.start;
+        let mut h = T_STEP_MIN;
+        let mut next_h;
+        let mut n_iters;
+
+        while t < tran_params.stop {
+            (h, next_h, n_iters) = transient::step(
+                &self.nodes,
+                &mut self.elems,
+                &t,
+                &h,
+                &mut x,
+                &mut self.mna,
+                &in_src_idx,
+                &mut x_hist,
+                &mut t_hist,
+            );
+
+            t += h;
+            n_iters_hist.push(n_iters);
+            x_hist.push(x.clone());
+            t_hist.push(t);
+
+            for elem in self.elems.iter_mut() {
+                elem.update_state(&self.nodes, &x, &h);
+            }
+
+            h = next_h;
+        }
+
+        (n_iters_hist, t_hist, x_hist)
     }
 }

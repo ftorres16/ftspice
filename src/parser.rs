@@ -127,6 +127,8 @@ fn parse_cap(node: Pair<Rule>) -> device::cap::Cap {
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
         val: value,
+        u_curr: None,
+        i_curr: None,
     }
 }
 
@@ -344,6 +346,19 @@ mod tests {
     }
 
     #[test]
+    fn parse_spice_file_rc_tran_test() {
+        let (elems, cmds) = parse_spice_file("test/rc.sp");
+
+        assert_eq!(elems.len(), 3);
+        assert_eq!(elems[0].get_name(), "V01");
+        assert_eq!(elems[1].get_name(), "R12");
+        assert_eq!(elems[2].get_name(), "C20");
+
+        assert_eq!(cmds.len(), 1);
+        assert!(matches!(cmds[0], command::Command::Tran(_)));
+    }
+
+    #[test]
     fn parse_res_generic() {
         let pair = SpiceParser::parse(Rule::r_node, "R1 1 0 R=2.2k")
             .unwrap()
@@ -486,6 +501,23 @@ mod tests {
         assert!(matches!(cmd, command::Command::DC(_)));
         if let command::Command::DC(params) = cmd {
             assert_eq!(params.source, "I1");
+            assert_eq!(params.start, 0.0);
+            assert_eq!(params.stop, 1.0);
+            assert_eq!(params.step, 1e-3);
+        }
+    }
+
+    #[test]
+    fn parse_tran_cmd_generic() {
+        let pair = SpiceParser::parse(Rule::tran_cmd, ".TRAN 0 1 1m")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let cmd = parse_tran_cmd(pair);
+
+        assert!(matches!(cmd, command::Command::Tran(_)));
+        if let command::Command::Tran(params) = cmd {
             assert_eq!(params.start, 0.0);
             assert_eq!(params.stop, 1.0);
             assert_eq!(params.step, 1e-3);

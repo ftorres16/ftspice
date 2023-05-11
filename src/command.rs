@@ -13,7 +13,7 @@ pub struct DCParams {
     pub step: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TranParams {
     pub start: f64,
     pub stop: f64,

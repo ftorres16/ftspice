@@ -1,9 +1,9 @@
-pub fn mat_vec_prod(a_mat: &Vec<Vec<f64>>, b_vec: &Vec<f64>) -> Vec<f64> {
-    let mut out = vec![0.0; a_mat.len()];
+pub fn mat_vec_prod(a: &Vec<Vec<f64>>, b: &Vec<f64>) -> Vec<f64> {
+    let mut out = vec![0.0; a.len()];
 
-    for i in 0..a_mat.len() {
-        for j in 0..a_mat[0].len() {
-            out[i] += a_mat[i][j] * b_vec[j];
+    for i in 0..a.len() {
+        for j in 0..a[0].len() {
+            out[i] += a[i][j] * b[j];
         }
     }
     out
@@ -15,6 +15,10 @@ pub fn vec_add(a: &Vec<f64>, b: &Vec<f64>) -> Vec<f64> {
 
 pub fn vec_sub(a: &Vec<f64>, b: &Vec<f64>) -> Vec<f64> {
     a.iter().zip(b).map(|(x, y)| x - y).collect::<Vec<_>>()
+}
+
+pub fn vec_scalar_prod(v: &Vec<f64>, alpha: f64) -> Vec<f64> {
+    v.iter().map(|x| x * alpha).collect()
 }
 
 #[cfg(test)]

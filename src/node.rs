@@ -58,12 +58,6 @@ pub fn parse_elems(elems: &Vec<Box<dyn Stamp>>) -> NodeCollection {
 }
 
 impl NodeCollection {
-    pub fn new() -> Self {
-        NodeCollection {
-            data: BTreeMap::new(),
-        }
-    }
-
     pub fn len(&self) -> usize {
         self.data.len()
     }
@@ -78,9 +72,5 @@ impl NodeCollection {
 
     pub fn values(&self) -> impl Iterator<Item = &MNANode> {
         self.data.values()
-    }
-
-    pub fn insert(&mut self, name: &str, node: MNANode) {
-        self.data.insert(name.to_string(), node);
     }
 }

@@ -1,6 +1,6 @@
 file = { SOI ~ ((node | command)? ~ NEWLINE)* ~ end_cmd ~ EOI }
 
-command =  { op_cmd | dc_cmd }
+command =  { op_cmd | dc_cmd | tran_cmd }
 
 op_cmd = { ^".op" }
 dc_cmd = { ^".dc" ~ (v_name | i_name) ~ value ~ value ~ value }
