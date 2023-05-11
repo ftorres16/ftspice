@@ -121,9 +121,7 @@ impl Engine {
             elem.init_state(&self.nodes, &x);
         }
 
-        let mut n_iters_hist = Vec::new();
-        let mut t_hist = Vec::new();
-        let mut x_hist = Vec::new();
+        let mut state_hist = Vec::new();
 
         let in_src_idx = self
             .elems
@@ -134,10 +132,9 @@ impl Engine {
         let mut t = tran_params.start;
         let mut h = T_STEP_MIN;
         let mut next_h;
-        let mut n_iters;
 
         while t < tran_params.stop {
-            (h, next_h, n_iters) = transient::step(
+            (h, next_h) = transient::step(
                 &self.nodes,
                 &mut self.elems,
                 &t,
@@ -145,15 +142,11 @@ impl Engine {
                 &mut x,
                 &mut self.mna,
                 &in_src_idx,
-                &mut x_hist,
-                &mut t_hist,
+                &mut state_hist,
                 &tran_params.step,
             );
 
             t += h;
-            n_iters_hist.push(n_iters);
-            x_hist.push(x.clone());
-            t_hist.push(t);
 
             for elem in self.elems.iter_mut() {
                 elem.update_state(&self.nodes, &x, &h);
@@ -162,6 +155,10 @@ impl Engine {
             h = next_h;
         }
 
-        (n_iters_hist, t_hist, x_hist)
+        (
+            state_hist.iter().map(|s| s.n_iters).collect(),
+            state_hist.iter().map(|s| s.t).collect(),
+            state_hist.iter().map(|s| s.x.clone()).collect(),
+        )
     }
 }
