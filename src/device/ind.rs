@@ -46,4 +46,15 @@ impl Stamp for Ind {
     ) {
         todo!();
     }
+
+    fn undo_dynamic_stamp(
+        &self,
+        _nodes: &NodeCollection,
+        _x: &Vec<f64>,
+        _h: &f64,
+        _a: &mut Vec<Vec<f64>>,
+        _b: &mut Vec<f64>,
+    ) {
+        todo!();
+    }
 }

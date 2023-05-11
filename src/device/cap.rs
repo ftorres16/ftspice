@@ -100,4 +100,43 @@ impl Stamp for Cap {
             a[j][i] -= g_eq;
         }
     }
+
+    fn undo_dynamic_stamp(
+        &self,
+        nodes: &NodeCollection,
+        x: &Vec<f64>,
+        h: &f64,
+        a: &mut Vec<Vec<f64>>,
+        b: &mut Vec<f64>,
+    ) {
+        let vneg_idx = nodes.get_idx(&self.nodes[0]);
+        let vpos_idx = nodes.get_idx(&self.nodes[1]);
+
+        let vpos = vpos_idx.map_or(0.0, |i| x[i]);
+        let vneg = vneg_idx.map_or(0.0, |i| x[i]);
+
+        let c = model::Model {
+            vpos: vpos,
+            vneg: vneg,
+            val: self.val,
+            u_old: self.u_curr.expect("Cap voltage history not initialized"),
+            i_old: self.i_curr.expect("Cap current history not initialized"),
+        };
+
+        let g_eq = c.g_eq(h);
+        let i_eq = c.i_eq(h);
+
+        if let Some(i) = vpos_idx {
+            a[i][i] -= g_eq;
+            b[i] += i_eq;
+        }
+        if let Some(i) = vneg_idx {
+            a[i][i] -= g_eq;
+            b[i] -= i_eq;
+        }
+        if let (Some(i), Some(j)) = (vneg_idx, vpos_idx) {
+            a[i][j] += g_eq;
+            a[j][i] += g_eq;
+        }
+    }
 }

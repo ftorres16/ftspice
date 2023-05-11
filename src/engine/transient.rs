@@ -35,7 +35,7 @@ pub fn step(
 
     while !step_accepted {
         elems[in_src_idx].undo_linear_stamp(&nodes, &mut mna.a, &mut mna.b);
-        elems[in_src_idx].set_value(in_src_voltage(t));
+        elems[in_src_idx].set_value(in_src_voltage(&(t + h)));
         elems[in_src_idx].linear_stamp(&nodes, &mut mna.a, &mut mna.b);
 
         for elem in elems.iter() {
@@ -45,6 +45,9 @@ pub fn step(
         n_iters = newtons_method::solve(nodes, elems, x, &mna);
 
         if n_iters >= newtons_method::MAX_ITERS {
+            for elem in elems.iter() {
+                elem.undo_dynamic_stamp(&nodes, &x, &h, &mut mna.a, &mut mna.b);
+            }
             h /= 2.0;
         } else if x_hist.len() < 4 {
             next_h = h;
@@ -59,17 +62,16 @@ pub fn step(
             let plte_norm = NodeVecNorm::new(nodes, &plte);
             let x_norm = NodeVecNorm::new(nodes, &x);
 
-            if plte_norm.v > x_norm.v * TOL_REL + TOL_ABS_V
-                || plte_norm.i > x_norm.i * TOL_REL + TOL_ABS_A
-            {
+            if plte_is_too_big(&plte_norm, &x_norm) {
+                for elem in elems.iter() {
+                    elem.undo_dynamic_stamp(&nodes, &x, &h, &mut mna.a, &mut mna.b);
+                }
+
                 h /= 2.0;
             } else {
                 step_accepted = true;
 
-                if plte_norm.v < 0.1 * TOL_ABS_V
-                    && plte_norm.i < 0.1 * TOL_ABS_A
-                    && h <= step_max / 2.0
-                {
+                if plte_is_small(&plte_norm) && h <= step_max / 2.0 {
                     next_h = h * 2.0;
                 } else {
                     next_h = h;
@@ -117,4 +119,12 @@ fn in_src_voltage(t: &f64) -> f64 {
     let tau = 2e-9;
     let v0 = 3.0;
     v0 * (-t / tau).exp()
+}
+
+fn plte_is_too_big(plte: &NodeVecNorm, x: &NodeVecNorm) -> bool {
+    plte.v > x.v * TOL_REL + TOL_ABS_V || plte.i > x.i * TOL_REL + TOL_ABS_A
+}
+
+fn plte_is_small(plte: &NodeVecNorm) -> bool {
+    plte.v < 0.1 * TOL_ABS_V && plte.i < 0.1 * TOL_ABS_A
 }

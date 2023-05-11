@@ -56,6 +56,16 @@ pub trait Stamp {
     ) {
     }
 
+    fn undo_dynamic_stamp(
+        &self,
+        _nodes: &node::NodeCollection,
+        _x: &Vec<f64>,
+        _h: &f64,
+        _a: &mut Vec<Vec<f64>>,
+        _b: &mut Vec<f64>,
+    ) {
+    }
+
     fn count_nonlinear_funcs(&self) -> usize {
         0
     }
