@@ -21,15 +21,14 @@ pub struct TranStateHistory {
 pub fn step(
     nodes: &NodeCollection,
     elems: &mut Vec<Box<dyn Stamp>>,
+    mna: &mut MNA,
     t: &f64,
     h: &f64,
     x: &mut Vec<f64>,
-    mna: &mut MNA,
     in_src_idx: &usize,
     state_hist: &mut Vec<TranStateHistory>,
     step_max: &f64,
 ) -> (f64, f64) {
-    let mut n_iters;
     let mut h = h.to_owned();
     let mut next_h = h;
     let mut step_accepted = false;
@@ -48,7 +47,7 @@ pub fn step(
             elem.dynamic_stamp(&nodes, &x, &h, &mut mna.a, &mut mna.b);
         }
 
-        n_iters = newtons_method::solve(nodes, elems, x, &mna);
+        let n_iters = newtons_method::solve(nodes, elems, x, &mna);
 
         state_hist.push(TranStateHistory {
             n_iters,

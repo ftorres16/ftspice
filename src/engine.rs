@@ -137,10 +137,10 @@ impl Engine {
             (h, next_h) = transient::step(
                 &self.nodes,
                 &mut self.elems,
+                &mut self.mna,
                 &t,
                 &h,
                 &mut x,
-                &mut self.mna,
                 &in_src_idx,
                 &mut state_hist,
                 &tran_params.step,
