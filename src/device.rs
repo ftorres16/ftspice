@@ -7,6 +7,7 @@ pub mod ind;
 pub mod nmos;
 pub mod npn;
 pub mod res;
+pub mod spice_fn;
 pub mod vdd;
 
 // MNA sgroups from Circuit Simulation Book
@@ -25,6 +26,12 @@ pub trait Stamp {
     fn get_value(&self) -> f64;
 
     fn set_value(&mut self, value: f64);
+
+    fn has_tran(&self) -> bool {
+        false
+    }
+
+    fn eval_tran(&mut self, _t: &f64) {}
 
     fn linear_stamp(
         &self,

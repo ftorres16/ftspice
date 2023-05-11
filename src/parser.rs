@@ -2,6 +2,7 @@ use std::fs;
 
 use crate::command;
 use crate::device;
+use crate::device::spice_fn::{SineParams, SpiceFn};
 use crate::device::Stamp;
 
 use pest::iterators::Pair;
@@ -65,12 +66,12 @@ fn parse_res(node: Pair<Rule>) -> device::res::Res {
     let node_0 = node_details.next().unwrap().as_str();
     let node_1 = node_details.next().unwrap().as_str();
 
-    let value = parse_value(node_details.next().unwrap());
+    let val = parse_value(node_details.next().unwrap());
 
     device::res::Res {
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
-        val: value,
+        val,
     }
 }
 
@@ -79,12 +80,39 @@ fn parse_vdd(node: Pair<Rule>) -> device::vdd::Vdd {
     let name = node_details.next().unwrap().as_str();
     let node_1 = node_details.next().unwrap().as_str();
     let node_0 = node_details.next().unwrap().as_str();
-    let val = parse_value(node_details.next().unwrap().into_inner().next().unwrap());
+
+    let val_details = node_details.next().unwrap().into_inner().next().unwrap();
+    let val;
+    let tran_fn;
+
+    match val_details.as_rule() {
+        Rule::v_dc_value => {
+            val = parse_value(val_details.into_inner().next().unwrap());
+            tran_fn = None;
+        }
+        Rule::fn_value => {
+            let mut sine_details = val_details.into_inner().next().unwrap().into_inner();
+            let offset = parse_value(sine_details.next().unwrap());
+            let amplitude = parse_value(sine_details.next().unwrap());
+            let freq = parse_value(sine_details.next().unwrap());
+
+            let spice_fn = SpiceFn::Sine(SineParams {
+                offset,
+                amplitude,
+                freq,
+            });
+
+            val = spice_fn.eval(&0.0).clone();
+            tran_fn = Some(spice_fn);
+        }
+        _ => unreachable!(),
+    };
 
     device::vdd::Vdd {
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
-        val: val,
+        val,
+        tran_fn,
     }
 }
 
@@ -359,6 +387,19 @@ mod tests {
     }
 
     #[test]
+    fn parse_spice_file_rc_sine_tran_test() {
+        let (elems, cmds) = parse_spice_file("test/rc_sine.sp");
+
+        assert_eq!(elems.len(), 3);
+        assert_eq!(elems[0].get_name(), "V01");
+        assert_eq!(elems[1].get_name(), "R12");
+        assert_eq!(elems[2].get_name(), "C20");
+
+        assert_eq!(cmds.len(), 1);
+        assert!(matches!(cmds[0], command::Command::Tran(_)));
+    }
+
+    #[test]
     fn parse_res_generic() {
         let pair = SpiceParser::parse(Rule::r_node, "R1 1 0 R=2.2k")
             .unwrap()
@@ -382,6 +423,26 @@ mod tests {
         assert_eq!(elem.name, "V1");
         assert_eq!(elem.nodes, ["0", "1"]);
         assert_eq!(elem.val, 4.0);
+        assert!(matches!(elem.tran_fn, None));
+    }
+
+    #[test]
+    fn parse_vdd_sine() {
+        let pair = SpiceParser::parse(Rule::v_node, "V1 1 0 SIN(0.0 1.0 10k)")
+            .unwrap()
+            .next()
+            .unwrap();
+        let elem = parse_vdd(pair);
+
+        assert_eq!(elem.name, "V1");
+        assert_eq!(elem.nodes, ["0", "1"]);
+        assert_eq!(elem.val, 0.0);
+
+        let tran_fn = elem.tran_fn.expect("Tran Fn not set");
+        let SpiceFn::Sine(params) = tran_fn;
+        assert_eq!(params.offset, 0.0);
+        assert_eq!(params.amplitude, 1.0);
+        assert_eq!(params.freq, 10e3);
     }
 
     #[test]

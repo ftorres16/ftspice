@@ -123,12 +123,6 @@ impl Engine {
 
         let mut state_hist = Vec::new();
 
-        let in_src_idx = self
-            .elems
-            .iter()
-            .position(|x| x.get_name().starts_with("V"))
-            .expect("No V source found");
-
         let mut t = tran_params.start;
         let mut h = T_STEP_MIN;
         let mut next_h;
@@ -141,7 +135,6 @@ impl Engine {
                 &t,
                 &h,
                 &mut x,
-                &in_src_idx,
                 &mut state_hist,
                 &tran_params.step,
             );

@@ -25,7 +25,6 @@ pub fn step(
     t: &f64,
     h: &f64,
     x: &mut Vec<f64>,
-    in_src_idx: &usize,
     state_hist: &mut Vec<TranStateHistory>,
     step_max: &f64,
 ) -> (f64, f64) {
@@ -33,15 +32,17 @@ pub fn step(
     let mut next_h = h;
     let mut step_accepted = false;
 
-    let in_src_idx = in_src_idx.to_owned();
     let a_bkp = mna.a.clone();
     let b_bkp = mna.b.clone();
-    let in_src_bkp = elems[in_src_idx].get_value();
 
     while !step_accepted {
-        elems[in_src_idx].undo_linear_stamp(&nodes, &mut mna.a, &mut mna.b);
-        elems[in_src_idx].set_value(in_src_voltage(&(t + h)));
-        elems[in_src_idx].linear_stamp(&nodes, &mut mna.a, &mut mna.b);
+        for elem in elems.iter_mut() {
+            if elem.has_tran() {
+                elem.undo_linear_stamp(&nodes, &mut mna.a, &mut mna.b);
+                elem.eval_tran(&(t + h));
+                elem.linear_stamp(&nodes, &mut mna.a, &mut mna.b);
+            }
+        }
 
         for elem in elems.iter() {
             elem.dynamic_stamp(&nodes, &x, &h, &mut mna.a, &mut mna.b);
@@ -93,7 +94,6 @@ pub fn step(
 
     mna.a = a_bkp;
     mna.b = b_bkp;
-    elems[in_src_idx].set_value(in_src_bkp);
 
     (h, next_h)
 }
@@ -120,12 +120,6 @@ fn plte_vec(state_hist: &Vec<TranStateHistory>, n: usize) -> Vec<f64> {
         &divided_diff(state_hist, n + 1, n - 2),
         6.0 * c3 * h_next.powi(3),
     )
-}
-
-fn in_src_voltage(t: &f64) -> f64 {
-    let tau = 2e-9;
-    let v0 = 3.0;
-    v0 * (-t / tau).exp()
 }
 
 fn plte_is_too_big(plte: &NodeVecNorm, x: &NodeVecNorm) -> bool {

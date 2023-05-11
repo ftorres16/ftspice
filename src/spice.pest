@@ -13,7 +13,8 @@ r_name = @{ ^"R" ~ name }
 r_node = { r_name ~ name ~ name ~ ^"R" ~ "=" ~ value }
 
 v_name = @{ ^"V" ~ name }
-v_value = @{ value ~ ^"V" }
+v_dc_value = @{ value ~ ^"V" }
+v_value = { v_dc_value | fn_value }
 v_node = { v_name ~ name ~ name ~ v_value }
 
 i_name = @{ ^"I" ~ name }
@@ -42,6 +43,9 @@ name = @{ ASCII_ALPHANUMERIC+ }
 value = ${ number ~ prefix? }
 number = @{ "-"? ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)?}
 prefix = { "G" | "M" | "k" | "h" | "da" | "d" | "c" | "m" | "u" | "n" | "p" | "f" }
+
+fn_value = { sine_fn }
+sine_fn = { ^"SIN(" ~ value ~ value ~ value ~ ")" }
 
 WHITESPACE = _{ " " }
 COMMENT = _{

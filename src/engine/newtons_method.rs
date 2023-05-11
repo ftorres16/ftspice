@@ -8,8 +8,8 @@ use crate::node;
 pub const MAX_ITERS: u64 = 100;
 
 const TOL_REL: f64 = 0.001;
-const TOL_ABS_V: f64 = 1e-3;
-const TOL_ABS_A: f64 = 1e-6;
+const TOL_ABS_V: f64 = 1e-6;
+const TOL_ABS_A: f64 = 1e-9;
 
 const DAMPING_GAMMA: f64 = 1.3;
 const DAMPING_K: f64 = 16.0;
