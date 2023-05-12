@@ -5,7 +5,7 @@ use crate::engine::newtons_method;
 use crate::engine::node_vec_norm::NodeVecNorm;
 use crate::node::NodeCollection;
 
-pub const T_STEP_MIN: f64 = 1e-12;
+pub const T_STEP_MIN: f64 = 1e-15;
 
 const TOL_REL: f64 = 0.001;
 const TOL_ABS_V: f64 = 1e-3;

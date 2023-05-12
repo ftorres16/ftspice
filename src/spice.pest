@@ -45,8 +45,9 @@ value = ${ number ~ prefix? }
 number = @{ "-"? ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)?}
 prefix = { "G" | "M" | "k" | "h" | "da" | "d" | "c" | "m" | "u" | "n" | "p" | "f" }
 
-fn_value = { sine_fn }
+fn_value = { sine_fn | pulse_fn }
 sine_fn = { ^"SIN(" ~ value ~ value ~ value ~ ")" }
+pulse_fn = { ^"PULSE(" ~ value ~ value ~ value ~ value ~ value ~ value ~ value ~ ")" }
 
 WHITESPACE = _{ " " }
 COMMENT = _{

@@ -2,7 +2,7 @@ use std::fs;
 
 use crate::command;
 use crate::device;
-use crate::device::spice_fn::{SineParams, SpiceFn};
+use crate::device::spice_fn::{PulseParams, SineParams, SpiceFn};
 use crate::device::Stamp;
 
 use pest::iterators::Pair;
@@ -249,16 +249,41 @@ fn parse_tran_cmd(cmd: Pair<Rule>) -> command::Command {
 }
 
 fn parse_spice_fn(fn_value: Pair<Rule>) -> SpiceFn {
-    let mut sine_details = fn_value.into_inner();
-    let offset = parse_value(sine_details.next().unwrap());
-    let amplitude = parse_value(sine_details.next().unwrap());
-    let freq = parse_value(sine_details.next().unwrap());
+    match fn_value.as_rule() {
+        Rule::sine_fn => {
+            let mut fn_details = fn_value.into_inner();
+            let offset = parse_value(fn_details.next().unwrap());
+            let amplitude = parse_value(fn_details.next().unwrap());
+            let freq = parse_value(fn_details.next().unwrap());
 
-    SpiceFn::Sine(SineParams {
-        offset,
-        amplitude,
-        freq,
-    })
+            SpiceFn::Sine(SineParams {
+                offset,
+                amplitude,
+                freq,
+            })
+        }
+        Rule::pulse_fn => {
+            let mut fn_details = fn_value.into_inner();
+            let v1 = parse_value(fn_details.next().unwrap());
+            let v2 = parse_value(fn_details.next().unwrap());
+            let delay = parse_value(fn_details.next().unwrap());
+            let t_rise = parse_value(fn_details.next().unwrap());
+            let t_fall = parse_value(fn_details.next().unwrap());
+            let pulse_width = parse_value(fn_details.next().unwrap());
+            let period = parse_value(fn_details.next().unwrap());
+
+            SpiceFn::Pulse(PulseParams {
+                v1,
+                v2,
+                delay,
+                t_rise,
+                t_fall,
+                pulse_width,
+                period,
+            })
+        }
+        _ => unreachable!(),
+    }
 }
 
 fn parse_value(value: Pair<Rule>) -> f64 {
@@ -420,6 +445,19 @@ mod tests {
     }
 
     #[test]
+    fn parse_spice_file_rc_pulse_tran_test() {
+        let (elems, cmds) = parse_spice_file("test/rc_pulse.sp");
+
+        assert_eq!(elems.len(), 3);
+        assert_eq!(elems[0].get_name(), "V01");
+        assert_eq!(elems[1].get_name(), "R12");
+        assert_eq!(elems[2].get_name(), "C20");
+
+        assert_eq!(cmds.len(), 1);
+        assert!(matches!(cmds[0], command::Command::Tran(_)));
+    }
+
+    #[test]
     fn parse_res_generic() {
         let pair = SpiceParser::parse(Rule::r_node, "R1 1 0 R=2.2k")
             .unwrap()
@@ -459,10 +497,13 @@ mod tests {
         assert_eq!(elem.val, 0.0);
 
         let tran_fn = elem.tran_fn.expect("Tran Fn not set");
-        let SpiceFn::Sine(params) = tran_fn;
-        assert_eq!(params.offset, 0.0);
-        assert_eq!(params.amplitude, 1.0);
-        assert_eq!(params.freq, 10e3);
+        if let SpiceFn::Sine(params) = tran_fn {
+            assert_eq!(params.offset, 0.0);
+            assert_eq!(params.amplitude, 1.0);
+            assert_eq!(params.freq, 10e3);
+        } else {
+            panic!("Tran Function is not Sine");
+        }
     }
 
     #[test]
@@ -491,10 +532,13 @@ mod tests {
         assert_eq!(elem.val, 0.0);
 
         let tran_fn = elem.tran_fn.expect("Tran Fn not set");
-        let SpiceFn::Sine(params) = tran_fn;
-        assert_eq!(params.offset, 0.0);
-        assert_eq!(params.amplitude, 1.0);
-        assert_eq!(params.freq, 10e3);
+        if let SpiceFn::Sine(params) = tran_fn {
+            assert_eq!(params.offset, 0.0);
+            assert_eq!(params.amplitude, 1.0);
+            assert_eq!(params.freq, 10e3);
+        } else {
+            panic!("Tran Function is not Sine");
+        }
     }
 
     #[test]
@@ -621,6 +665,53 @@ mod tests {
             assert_eq!(params.start, 0.0);
             assert_eq!(params.stop, 1.0);
             assert_eq!(params.step, 1e-3);
+        }
+    }
+
+    #[test]
+    fn parse_spice_fn_sine() {
+        let pair = SpiceParser::parse(Rule::fn_value, "SIN(0.0 1.0 10k)")
+            .unwrap()
+            .next()
+            .unwrap()
+            .into_inner()
+            .next()
+            .unwrap();
+
+        let fn_ = parse_spice_fn(pair);
+
+        assert!(matches!(fn_, SpiceFn::Sine(_)));
+        if let SpiceFn::Sine(params) = fn_ {
+            assert_eq!(params.offset, 0.0);
+            assert_eq!(params.amplitude, 1.0);
+            assert_eq!(params.freq, 10e3);
+        } else {
+            panic!("Tran Function is not Sine");
+        }
+    }
+
+    #[test]
+    fn parse_spice_fn_pulse() {
+        let pair = SpiceParser::parse(Rule::fn_value, "PULSE(0.0 1.0 0.0 1p 1p 5n 10n)")
+            .unwrap()
+            .next()
+            .unwrap()
+            .into_inner()
+            .next()
+            .unwrap();
+
+        let fn_ = parse_spice_fn(pair);
+
+        assert!(matches!(fn_, SpiceFn::Pulse(_)));
+        if let SpiceFn::Pulse(params) = fn_ {
+            assert_eq!(params.v1, 0.0);
+            assert_eq!(params.v2, 1.0);
+            assert_eq!(params.t_rise, 1e-12);
+            assert_eq!(params.t_fall, 1e-12);
+            assert_eq!(params.pulse_width, 5e-9);
+            assert_eq!(params.period, 10e-9);
+        } else {
+            panic!("Tran Function is not Pulse");
         }
     }
 
