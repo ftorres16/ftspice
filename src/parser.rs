@@ -2,7 +2,7 @@ use std::fs;
 
 use crate::command;
 use crate::device;
-use crate::device::spice_fn::{PulseParams, SineParams, SpiceFn};
+use crate::device::spice_fn::{ExpParams, PulseParams, SineParams, SpiceFn};
 use crate::device::Stamp;
 
 use pest::iterators::Pair;
@@ -282,6 +282,24 @@ fn parse_spice_fn(fn_value: Pair<Rule>) -> SpiceFn {
                 period,
             })
         }
+        Rule::exp_fn => {
+            let mut fn_details = fn_value.into_inner();
+            let v1 = parse_value(fn_details.next().unwrap());
+            let v2 = parse_value(fn_details.next().unwrap());
+            let rise_delay = parse_value(fn_details.next().unwrap());
+            let rise_tau = parse_value(fn_details.next().unwrap());
+            let fall_delay = parse_value(fn_details.next().unwrap());
+            let fall_tau = parse_value(fn_details.next().unwrap());
+
+            SpiceFn::Exp(ExpParams {
+                v1,
+                v2,
+                rise_delay,
+                rise_tau,
+                fall_delay,
+                fall_tau,
+            })
+        }
         _ => unreachable!(),
     }
 }
@@ -447,6 +465,19 @@ mod tests {
     #[test]
     fn parse_spice_file_rc_pulse_tran_test() {
         let (elems, cmds) = parse_spice_file("test/rc_pulse.sp");
+
+        assert_eq!(elems.len(), 3);
+        assert_eq!(elems[0].get_name(), "V01");
+        assert_eq!(elems[1].get_name(), "R12");
+        assert_eq!(elems[2].get_name(), "C20");
+
+        assert_eq!(cmds.len(), 1);
+        assert!(matches!(cmds[0], command::Command::Tran(_)));
+    }
+
+    #[test]
+    fn parse_spice_file_rc_exp_tran_test() {
+        let (elems, cmds) = parse_spice_file("test/rc_exp.sp");
 
         assert_eq!(elems.len(), 3);
         assert_eq!(elems[0].get_name(), "V01");
@@ -706,12 +737,38 @@ mod tests {
         if let SpiceFn::Pulse(params) = fn_ {
             assert_eq!(params.v1, 0.0);
             assert_eq!(params.v2, 1.0);
+            assert_eq!(params.delay, 0.0);
             assert_eq!(params.t_rise, 1e-12);
             assert_eq!(params.t_fall, 1e-12);
             assert_eq!(params.pulse_width, 5e-9);
             assert_eq!(params.period, 10e-9);
         } else {
             panic!("Tran Function is not Pulse");
+        }
+    }
+
+    #[test]
+    fn parse_spice_fn_exp() {
+        let pair = SpiceParser::parse(Rule::fn_value, "EXP(0.0 1.0 0.0 1n 5n 1n)")
+            .unwrap()
+            .next()
+            .unwrap()
+            .into_inner()
+            .next()
+            .unwrap();
+
+        let fn_ = parse_spice_fn(pair);
+
+        assert!(matches!(fn_, SpiceFn::Exp(_)));
+        if let SpiceFn::Exp(params) = fn_ {
+            assert_eq!(params.v1, 0.0);
+            assert_eq!(params.v2, 1.0);
+            assert_eq!(params.rise_delay, 0.0);
+            assert_eq!(params.rise_tau, 1e-9);
+            assert_eq!(params.fall_delay, 5e-9);
+            assert_eq!(params.fall_tau, 1e-9);
+        } else {
+            panic!("Tran Function is not Exp");
         }
     }
 

@@ -2,6 +2,7 @@
 pub enum SpiceFn {
     Pulse(PulseParams),
     Sine(SineParams),
+    Exp(ExpParams),
 }
 
 impl SpiceFn {
@@ -9,6 +10,7 @@ impl SpiceFn {
         match &self {
             SpiceFn::Sine(p) => p.eval(t),
             SpiceFn::Pulse(p) => p.eval(t),
+            SpiceFn::Exp(p) => p.eval(t),
         }
     }
 }
@@ -73,6 +75,51 @@ impl PulseParams {
             PulseState::Rising(frac) => self.v1 + frac * (self.v2 - self.v1),
             PulseState::High => self.v2,
             PulseState::Falling(frac) => self.v2 + frac * (self.v1 - self.v2),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ExpParams {
+    pub v1: f64,
+    pub v2: f64,
+    pub rise_delay: f64,
+    pub rise_tau: f64,
+    pub fall_delay: f64,
+    pub fall_tau: f64,
+}
+
+#[derive(Debug)]
+enum ExpState {
+    Waiting,
+    Rising,
+    Falling,
+}
+
+impl ExpParams {
+    fn get_state(&self, t: &f64) -> ExpState {
+        if t < &self.rise_delay {
+            ExpState::Waiting
+        } else if t < &self.fall_delay {
+            ExpState::Rising
+        } else {
+            ExpState::Falling
+        }
+    }
+
+    fn eval(&self, t: &f64) -> f64 {
+        let state = self.get_state(t);
+
+        match state {
+            ExpState::Waiting => self.v1,
+            ExpState::Rising => {
+                self.v1 + (self.v1 - self.v2) * (-(t - self.rise_delay) / self.rise_tau).exp_m1()
+            }
+            ExpState::Falling => {
+                self.v1
+                    + (self.v1 - self.v2) * (-(t - self.rise_delay) / self.rise_tau).exp_m1()
+                    + (self.v2 - self.v1) * (-(t - self.fall_delay) / self.fall_tau).exp_m1()
+            }
         }
     }
 }
