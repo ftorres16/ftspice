@@ -4,7 +4,7 @@ command =  { op_cmd | dc_cmd | tran_cmd }
 
 op_cmd = { ^".op" }
 dc_cmd = { ^".dc" ~ (v_name | i_name) ~ value ~ value ~ value }
-tran_cmd = { ^".tran" ~ value ~ value ~ value }
+tran_cmd = { ^".tran" ~ value ~ value }
 end_cmd = _{ ^".end" ~ NEWLINE? }
 
 node = { r_node | v_node | i_node | cap_node | ind_node | dio_node | bjt_node | mos_node }

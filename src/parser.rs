@@ -237,14 +237,13 @@ fn parse_dc_cmd(cmd: Pair<Rule>) -> command::Command {
 fn parse_tran_cmd(cmd: Pair<Rule>) -> command::Command {
     let mut cmd_details = cmd.into_inner();
 
-    let start = parse_value(cmd_details.next().unwrap());
     let stop = parse_value(cmd_details.next().unwrap());
     let step = parse_value(cmd_details.next().unwrap());
 
     command::Command::Tran(command::TranParams {
-        start: start,
-        stop: stop,
-        step: step,
+        start: 0.0,
+        stop,
+        step,
     })
 }
 
@@ -684,7 +683,7 @@ mod tests {
 
     #[test]
     fn parse_tran_cmd_generic() {
-        let pair = SpiceParser::parse(Rule::tran_cmd, ".TRAN 0 1 1m")
+        let pair = SpiceParser::parse(Rule::tran_cmd, ".TRAN 1 1m")
             .unwrap()
             .next()
             .unwrap();
