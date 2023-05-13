@@ -26,11 +26,14 @@ impl Model {
     }
 
     pub fn state(&self) -> State {
-        if self.vgs() <= VT {
+        let vgs = self.vgs();
+        let vds = self.vds();
+
+        if vgs <= VT {
             State::CutOff
-        } else if 0.0 <= self.vds() && self.vds() <= self.vgs() - VT {
+        } else if 0.0 <= vds && vds <= vgs - VT {
             State::Linear
-        } else if 0.0 <= self.vgs() - VT && self.vgs() - VT <= self.vds() {
+        } else if 0.0 <= vgs - VT && vgs - VT <= vds {
             State::Saturated
         } else {
             unreachable!()

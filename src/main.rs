@@ -22,9 +22,10 @@ fn main() {
     let mut engine = engine::Engine::new(elems, cmds);
 
     if let Some(_) = engine.op_cmd {
-        let (n_iters, mut x) = engine.run_op();
+        let (n_iters, nodes, mut x) = engine.run_op();
 
-        let headers = engine.nodes.keys().map(|s| s.as_str()).collect::<Vec<_>>();
+        let mut headers = nodes.keys().map(|s| s.as_str()).collect::<Vec<_>>();
+        headers.insert(0, "n_iters");
         print_headers(&headers);
 
         x.insert(0, n_iters.clone() as f64);
@@ -32,9 +33,9 @@ fn main() {
     }
 
     if let Some(_) = engine.dc_cmd {
-        let (n_iters_hist, x_hist) = engine.run_dc();
+        let (n_iters_hist, nodes, x_hist) = engine.run_dc();
 
-        let mut headers = engine.nodes.keys().map(|s| s.as_str()).collect::<Vec<_>>();
+        let mut headers = nodes.keys().map(|s| s.as_str()).collect::<Vec<_>>();
         headers.insert(0, "n_iters");
         print_headers(&headers);
         for (n_iters, x) in n_iters_hist.iter().zip(x_hist) {
@@ -45,9 +46,9 @@ fn main() {
     }
 
     if let Some(_) = engine.tran_cmd {
-        let (n_iters_hist, t_hist, x_hist) = engine.run_tran();
+        let (n_iters_hist, nodes, t_hist, x_hist) = engine.run_tran();
 
-        let mut headers = engine.nodes.keys().map(|s| s.as_str()).collect::<Vec<_>>();
+        let mut headers = nodes.keys().map(|s| s.as_str()).collect::<Vec<_>>();
         headers.insert(0, "n_iters");
         headers.insert(1, "t");
         print_headers(&headers);

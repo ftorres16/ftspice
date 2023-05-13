@@ -148,6 +148,8 @@ fn parse_ind(node: Pair<Rule>) -> device::ind::Ind {
         name: String::from(name),
         nodes: vec![String::from(node_0), String::from(node_1)],
         val: value,
+        u_curr: None,
+        i_curr: None,
     }
 }
 
@@ -582,6 +584,8 @@ mod tests {
         assert_eq!(elem.name, "L1");
         assert_eq!(elem.nodes, ["0", "1"]);
         assert_eq!(elem.val, 1e-6);
+        assert_eq!(elem.u_curr, None);
+        assert_eq!(elem.i_curr, None);
     }
 
     #[test]
@@ -595,6 +599,8 @@ mod tests {
         assert_eq!(elem.name, "C1");
         assert_eq!(elem.nodes, ["0", "1"]);
         assert_eq!(elem.val, 1e-6);
+        assert_eq!(elem.u_curr, None);
+        assert_eq!(elem.i_curr, None);
     }
 
     #[test]

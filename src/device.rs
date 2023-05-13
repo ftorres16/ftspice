@@ -23,6 +23,11 @@ pub trait Stamp {
 
     fn gtype(&self) -> GType;
 
+    // For elements whose GType changes like Inductors
+    fn gtype_startup(&self) -> GType {
+        self.gtype()
+    }
+
     fn get_value(&self) -> f64;
 
     fn set_value(&mut self, value: f64);
@@ -47,6 +52,24 @@ pub trait Stamp {
         _a: &mut Vec<Vec<f64>>,
         _b: &mut Vec<f64>,
     ) {
+    }
+
+    fn linear_startup_stamp(
+        &self,
+        nodes: &node::NodeCollection,
+        a: &mut Vec<Vec<f64>>,
+        b: &mut Vec<f64>,
+    ) {
+        self.linear_stamp(nodes, a, b);
+    }
+
+    fn undo_linear_startup_stamp(
+        &self,
+        nodes: &node::NodeCollection,
+        a: &mut Vec<Vec<f64>>,
+        b: &mut Vec<f64>,
+    ) {
+        self.undo_linear_stamp(nodes, a, b);
     }
 
     fn init_state(&mut self, _nodes: &node::NodeCollection, _x: &Vec<f64>) {}

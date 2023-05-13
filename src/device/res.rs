@@ -76,7 +76,7 @@ mod tests {
     use super::*;
 
     fn parse_res(res: &Res) -> node::NodeCollection {
-        node::parse_elems(&vec![Box::new(res.clone())])
+        node::NodeCollection::from_elems(&vec![Box::new(res.clone())])
     }
 
     #[test]

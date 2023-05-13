@@ -160,7 +160,7 @@ mod tests {
     use super::*;
 
     fn parse_nmos(m: &NMOS) -> node::NodeCollection {
-        node::parse_elems(&vec![Box::new(m.clone())])
+        node::NodeCollection::from_elems(&vec![Box::new(m.clone())])
     }
 
     #[test]

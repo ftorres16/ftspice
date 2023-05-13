@@ -82,7 +82,7 @@ mod tests {
     use super::*;
 
     fn parse_idd(idd: &Idd) -> node::NodeCollection {
-        node::parse_elems(&vec![Box::new(idd.clone())])
+        node::NodeCollection::from_elems(&vec![Box::new(idd.clone())])
     }
 
     fn test_idd(nodes: &[&str]) -> Idd {
