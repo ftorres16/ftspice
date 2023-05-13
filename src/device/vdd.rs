@@ -1,5 +1,5 @@
-use crate::device::stamp;
-use crate::device::stamp::Stamp;
+use crate::device::spice_fn::SpiceFn;
+use crate::device::{GType, Stamp};
 use crate::node;
 
 #[derive(Debug, Clone)]
@@ -7,6 +7,7 @@ pub struct Vdd {
     pub name: String,
     pub nodes: Vec<String>,
     pub val: f64,
+    pub tran_fn: Option<SpiceFn>,
 }
 
 impl Stamp for Vdd {
@@ -18,12 +19,30 @@ impl Stamp for Vdd {
         &self.nodes
     }
 
-    fn gtype(&self) -> stamp::GType {
-        stamp::GType::G2
+    fn gtype(&self) -> GType {
+        GType::G2
+    }
+
+    fn get_value(&self) -> f64 {
+        self.val
     }
 
     fn set_value(&mut self, value: f64) {
         self.val = value;
+    }
+
+    fn has_tran(&self) -> bool {
+        if let Some(_) = &self.tran_fn {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn eval_tran(&mut self, t: &f64) {
+        if let Some(f) = &self.tran_fn {
+            self.val = f.eval(t);
+        }
     }
 
     fn linear_stamp(&self, nodes: &node::NodeCollection, a: &mut Vec<Vec<f64>>, b: &mut Vec<f64>) {
@@ -33,7 +52,7 @@ impl Stamp for Vdd {
             .get_idx(&self.name)
             .expect("Couldn't find node label for source.");
 
-        b[is_idx] += self.val;
+        b[is_idx] = self.val;
 
         if let Some(i) = vpos_idx {
             a[is_idx][i] += 1.0;
@@ -58,7 +77,7 @@ impl Stamp for Vdd {
             .get_idx(&self.name)
             .expect("Couldn't find node label for source.");
 
-        b[is_idx] -= self.val;
+        b[is_idx] = 0.0;
 
         if let Some(i) = vpos_idx {
             a[is_idx][i] -= 1.0;
@@ -74,23 +93,6 @@ impl Stamp for Vdd {
     fn count_nonlinear_funcs(&self) -> usize {
         0
     }
-
-    fn nonlinear_funcs(
-        &self,
-        _nodes: &node::NodeCollection,
-        _h_mat: &mut Vec<Vec<f64>>,
-        _g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
-    ) {
-    }
-
-    fn nonlinear_stamp(
-        &self,
-        _nodes: &node::NodeCollection,
-        _x: &Vec<f64>,
-        _a: &mut Vec<Vec<f64>>,
-        _b: &mut Vec<f64>,
-    ) {
-    }
 }
 
 #[cfg(test)]
@@ -98,16 +100,21 @@ mod tests {
     use super::*;
 
     fn parse_vdd(vdd: &Vdd) -> node::NodeCollection {
-        node::parse_elems(&vec![Box::new(vdd.clone())])
+        node::NodeCollection::from_elems(&vec![Box::new(vdd.clone())])
+    }
+
+    fn test_vdd(nodes: &[&str]) -> Vdd {
+        Vdd {
+            name: String::from("V1"),
+            nodes: nodes.iter().map(|s| s.to_string()).collect(),
+            val: 1e-3,
+            tran_fn: None,
+        }
     }
 
     #[test]
     fn test_linear_stamp_vdd_node_0_gnd() {
-        let vdd = Vdd {
-            name: String::from("V1"),
-            nodes: vec![String::from("0"), String::from("1")],
-            val: 1e-3,
-        };
+        let vdd = test_vdd(&["0", "1"]);
         let nodes = parse_vdd(&vdd);
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
         let mut b: Vec<f64> = vec![0.0; 2];
@@ -130,11 +137,7 @@ mod tests {
 
     #[test]
     fn test_linear_stamp_vdd_node_1_gnd() {
-        let vdd = Vdd {
-            name: String::from("V1"),
-            nodes: vec![String::from("1"), String::from("0")],
-            val: 1e-3,
-        };
+        let vdd = test_vdd(&["1", "0"]);
         let nodes = parse_vdd(&vdd);
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
         let mut b: Vec<f64> = vec![0.0; 2];
@@ -157,11 +160,7 @@ mod tests {
 
     #[test]
     fn test_linear_stamp_vdd_to_nodes() {
-        let vdd = Vdd {
-            name: String::from("V1"),
-            nodes: vec![String::from("1"), String::from("2")],
-            val: 1e-3,
-        };
+        let vdd = test_vdd(&["1", "2"]);
         let nodes = parse_vdd(&vdd);
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
         let mut b: Vec<f64> = vec![0.0; 3];
@@ -188,11 +187,7 @@ mod tests {
 
     #[test]
     fn test_undo_linear_stamp() {
-        let vdd = Vdd {
-            name: String::from("V1"),
-            nodes: vec![String::from("1"), String::from("2")],
-            val: 1e-3,
-        };
+        let vdd = test_vdd(&["1", "2"]);
         let nodes = parse_vdd(&vdd);
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
         let mut b: Vec<f64> = vec![0.0; 3];
@@ -206,11 +201,7 @@ mod tests {
 
     #[test]
     fn test_count_nonlinear_funcs() {
-        let vdd = Vdd {
-            name: String::from("V1"),
-            nodes: vec![String::from("1"), String::from("2")],
-            val: 1e-3,
-        };
+        let vdd = test_vdd(&["1", "2"]);
         let nodes = parse_vdd(&vdd);
         let mut h: Vec<Vec<f64>> = vec![vec![0.0; 1]; 2];
         let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
@@ -222,11 +213,7 @@ mod tests {
 
     #[test]
     fn test_nonlinear_funcs_() {
-        let vdd = Vdd {
-            name: String::from("V1"),
-            nodes: vec![String::from("1"), String::from("2")],
-            val: 1e-3,
-        };
+        let vdd = test_vdd(&["1", "2"]);
         let nodes = parse_vdd(&vdd);
         let mut h: Vec<Vec<f64>> = vec![vec![0.0; 1]; 2];
         let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
@@ -239,11 +226,7 @@ mod tests {
 
     #[test]
     fn test_nonlinear_stamp() {
-        let vdd = Vdd {
-            name: String::from("V1"),
-            nodes: vec![String::from("1"), String::from("2")],
-            val: 1e-3,
-        };
+        let vdd = test_vdd(&["1", "2"]);
         let nodes = parse_vdd(&vdd);
         let x: Vec<f64> = vec![1.0, 2.0];
         let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];

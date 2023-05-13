@@ -1,5 +1,4 @@
-use crate::device::stamp;
-use crate::device::stamp::Stamp;
+use crate::device::{GType, Stamp};
 use crate::node;
 
 #[derive(Debug, Clone)]
@@ -18,8 +17,12 @@ impl Stamp for Res {
         &self.nodes
     }
 
-    fn gtype(&self) -> stamp::GType {
-        stamp::GType::G1
+    fn gtype(&self) -> GType {
+        GType::G1
+    }
+
+    fn get_value(&self) -> f64 {
+        self.val
     }
 
     fn set_value(&mut self, value: f64) {
@@ -66,27 +69,6 @@ impl Stamp for Res {
             a[j][i] += g;
         }
     }
-
-    fn count_nonlinear_funcs(&self) -> usize {
-        0
-    }
-
-    fn nonlinear_funcs(
-        &self,
-        _nodes: &node::NodeCollection,
-        _h_mat: &mut Vec<Vec<f64>>,
-        _g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
-    ) {
-    }
-
-    fn nonlinear_stamp(
-        &self,
-        _nodes: &node::NodeCollection,
-        _x: &Vec<f64>,
-        _a: &mut Vec<Vec<f64>>,
-        _b: &mut Vec<f64>,
-    ) {
-    }
 }
 
 #[cfg(test)]
@@ -94,7 +76,7 @@ mod tests {
     use super::*;
 
     fn parse_res(res: &Res) -> node::NodeCollection {
-        node::parse_elems(&vec![Box::new(res.clone())])
+        node::NodeCollection::from_elems(&vec![Box::new(res.clone())])
     }
 
     #[test]

@@ -1,5 +1,4 @@
-use crate::device::stamp;
-use crate::device::stamp::Stamp;
+use crate::device::{GType, Stamp};
 use crate::node;
 
 mod model;
@@ -19,28 +18,16 @@ impl Stamp for Diode {
         &self.nodes
     }
 
-    fn gtype(&self) -> stamp::GType {
-        stamp::GType::G1
+    fn gtype(&self) -> GType {
+        GType::G1
+    }
+
+    fn get_value(&self) -> f64 {
+        unimplemented!()
     }
 
     fn set_value(&mut self, _value: f64) {
         unimplemented!()
-    }
-
-    fn linear_stamp(
-        &self,
-        _nodes: &node::NodeCollection,
-        _a: &mut Vec<Vec<f64>>,
-        _b: &mut Vec<f64>,
-    ) {
-    }
-
-    fn undo_linear_stamp(
-        &self,
-        _nodes: &node::NodeCollection,
-        _a: &mut Vec<Vec<f64>>,
-        _b: &mut Vec<f64>,
-    ) {
     }
 
     fn count_nonlinear_funcs(&self) -> usize {
@@ -109,7 +96,7 @@ mod tests {
     use super::*;
 
     fn parse_dio(dio: &Diode) -> node::NodeCollection {
-        node::parse_elems(&vec![Box::new(dio.clone())])
+        node::NodeCollection::from_elems(&vec![Box::new(dio.clone())])
     }
 
     #[test]

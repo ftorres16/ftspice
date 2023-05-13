@@ -1,23 +1,32 @@
 file = { SOI ~ ((node | command)? ~ NEWLINE)* ~ end_cmd ~ EOI }
 
-command =  { op_cmd | dc_cmd }
+command =  { op_cmd | dc_cmd | tran_cmd }
 
 op_cmd = { ^".op" }
 dc_cmd = { ^".dc" ~ (v_name | i_name) ~ value ~ value ~ value }
+tran_cmd = { ^".tran" ~ value ~ value }
 end_cmd = _{ ^".end" ~ NEWLINE? }
 
-node = { r_node | v_node | i_node | dio_node | bjt_node | mos_node }
+node = { r_node | v_node | i_node | cap_node | ind_node | dio_node | bjt_node | mos_node }
 
 r_name = @{ ^"R" ~ name }
 r_node = { r_name ~ name ~ name ~ ^"R" ~ "=" ~ value }
 
 v_name = @{ ^"V" ~ name }
-v_value = @{ value ~ ^"V" }
+v_dc_value = @{ value ~ ^"V" }
+v_value = { v_dc_value | fn_value }
 v_node = { v_name ~ name ~ name ~ v_value }
 
 i_name = @{ ^"I" ~ name }
-i_value = @{ value ~ ^"A" }
+i_dc_value = @{ value ~ ^"A" }
+i_value = { i_dc_value | fn_value }
 i_node = { i_name ~ name ~ name ~ i_value }
+
+cap_name = @{ ^"C" ~ name }
+cap_node = { cap_name ~ name ~ name ~ ^"C" ~ "=" ~ value }
+
+ind_name = @{ ^"L" ~ name }
+ind_node = { ind_name ~ name ~ name ~ ^"L" ~ "=" ~ value }
 
 dio_name = @{ ^"D" ~ name }
 dio_model_name = { "d_model" }
@@ -35,6 +44,11 @@ name = @{ ASCII_ALPHANUMERIC+ }
 value = ${ number ~ prefix? }
 number = @{ "-"? ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)?}
 prefix = { "G" | "M" | "k" | "h" | "da" | "d" | "c" | "m" | "u" | "n" | "p" | "f" }
+
+fn_value = { sine_fn | pulse_fn | exp_fn }
+sine_fn = { ^"SIN(" ~ value ~ value ~ value ~ ")" }
+pulse_fn = { ^"PULSE(" ~ value ~ value ~ value ~ value ~ value ~ value ~ value ~ ")" }
+exp_fn = { ^"EXP(" ~ value ~ value ~ value ~ value ~ value ~ value ~ ")" }
 
 WHITESPACE = _{ " " }
 COMMENT = _{
