@@ -9,25 +9,24 @@ pub struct NodeVecNorm {
 
 impl NodeVecNorm {
     pub fn new(nodes: &NodeCollection, v: &Vec<f64>) -> Self {
-        let mut norm = NodeVecNorm { v: 0.0, i: 0.0 };
+        let v_nodes = nodes
+            .values()
+            .filter(|x| matches!(x.ntype, NodeType::Voltage))
+            .collect::<Vec<_>>();
+        let i_nodes = nodes
+            .values()
+            .filter(|x| matches!(x.ntype, NodeType::Current))
+            .collect::<Vec<_>>();
 
-        for node in nodes.values() {
-            let norm_it = v[node.idx].abs();
+        let v_norm =
+            v_nodes.iter().map(|x| v[x.idx].powi(2)).sum::<f64>().sqrt() / v_nodes.len() as f64;
+        let i_norm =
+            i_nodes.iter().map(|x| v[x.idx].powi(2)).sum::<f64>().sqrt() / i_nodes.len() as f64;
 
-            match node.ntype {
-                NodeType::Voltage => {
-                    if norm_it > norm.v {
-                        norm.v = norm_it;
-                    }
-                }
-                NodeType::Current => {
-                    if norm_it > norm.i {
-                        norm.i = norm_it;
-                    }
-                }
-            }
+        NodeVecNorm {
+            v: v_norm,
+            i: i_norm,
         }
-        norm
     }
 
     pub fn infty() -> Self {

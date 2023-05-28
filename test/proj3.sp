@@ -20,6 +20,6 @@ C70 7 0 C=10p
 L83 8 3 L=0.3u
 
 *.OP
-.TRAN 40n 1n
+.TRAN 40n 5n
 
 .END
