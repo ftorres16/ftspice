@@ -54,28 +54,29 @@ impl Stamp for NPN {
             h_mat[i][g_vec.len() + 2] = 1.0;
         }
 
-        g_vec.push(Box::new(move |x: &Vec<f64>| {
-            let q = model::Model {
+        fn get_model(
+            vc_idx: Option<usize>,
+            vb_idx: Option<usize>,
+            ve_idx: Option<usize>,
+            x: &Vec<f64>,
+        ) -> model::Model {
+            model::Model {
                 vc: vc_idx.map_or(0.0, |i| x[i]),
                 vb: vb_idx.map_or(0.0, |i| x[i]),
                 ve: ve_idx.map_or(0.0, |i| x[i]),
-            };
+            }
+        }
+
+        g_vec.push(Box::new(move |x: &Vec<f64>| {
+            let q = get_model(vc_idx, vb_idx, ve_idx, x);
             q.ic()
         }));
         g_vec.push(Box::new(move |x: &Vec<f64>| {
-            let q = model::Model {
-                vc: vc_idx.map_or(0.0, |i| x[i]),
-                vb: vb_idx.map_or(0.0, |i| x[i]),
-                ve: ve_idx.map_or(0.0, |i| x[i]),
-            };
+            let q = get_model(vc_idx, vb_idx, ve_idx, x);
             q.ib()
         }));
         g_vec.push(Box::new(move |x: &Vec<f64>| {
-            let q = model::Model {
-                vc: vc_idx.map_or(0.0, |i| x[i]),
-                vb: vb_idx.map_or(0.0, |i| x[i]),
-                ve: ve_idx.map_or(0.0, |i| x[i]),
-            };
+            let q = get_model(vc_idx, vb_idx, ve_idx, x);
             q.ie()
         }));
     }
@@ -91,24 +92,11 @@ impl Stamp for NPN {
         let vb_idx = nodes.get_idx(&self.nodes[1]);
         let ve_idx = nodes.get_idx(&self.nodes[2]);
 
-        let vc = match vc_idx {
-            Some(i) => x[i],
-            None => 0.0,
-        };
-        let vb = match vb_idx {
-            Some(i) => x[i],
-            None => 0.0,
-        };
-        let ve = match ve_idx {
-            Some(i) => x[i],
-            None => 0.0,
-        };
+        let vc = vc_idx.map_or(0.0, |i| x[i]);
+        let vb = vb_idx.map_or(0.0, |i| x[i]);
+        let ve = ve_idx.map_or(0.0, |i| x[i]);
 
-        let q = model::Model {
-            vc: vc,
-            vb: vb,
-            ve: ve,
-        };
+        let q = model::Model { vc, vb, ve };
 
         let gee = q.gee();
         let gec = q.gec();

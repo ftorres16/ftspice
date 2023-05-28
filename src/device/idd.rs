@@ -32,11 +32,7 @@ impl Stamp for Idd {
     }
 
     fn has_tran(&self) -> bool {
-        if let Some(_) = &self.tran_fn {
-            true
-        } else {
-            false
-        }
+        self.tran_fn.is_some()
     }
 
     fn eval_tran(&mut self, t: &f64) {
