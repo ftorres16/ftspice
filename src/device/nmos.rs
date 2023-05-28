@@ -159,8 +159,8 @@ impl Stamp for NMOS {
 mod tests {
     use super::*;
 
-    fn parse_nmos(m: &NMOS) -> node::NodeCollection {
-        node::NodeCollection::from_elems(&vec![Box::new(m.clone())])
+    fn parse_nmos(m: &NMOS) -> NodeCollection {
+        NodeCollection::from_elems(&vec![Box::new(m.clone())])
     }
 
     #[test]

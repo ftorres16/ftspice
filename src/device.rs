@@ -7,7 +7,6 @@ pub mod ind;
 pub mod nmos;
 pub mod npn;
 pub mod res;
-pub mod spice_fn;
 pub mod vdd;
 
 // MNA sgroups from Circuit Simulation Book

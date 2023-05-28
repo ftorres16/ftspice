@@ -10,6 +10,7 @@ mod engine;
 mod node;
 mod node_collection;
 mod parser;
+mod spice_fn;
 
 fn main() {
     let args: Vec<String> = env::args().collect();

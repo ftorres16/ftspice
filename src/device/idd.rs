@@ -1,6 +1,6 @@
-use crate::device::spice_fn::SpiceFn;
 use crate::device::{GType, Stamp};
 use crate::node_collection::NodeCollection;
+use crate::spice_fn::SpiceFn;
 
 #[derive(Debug, Clone)]
 pub struct Idd {
@@ -76,8 +76,8 @@ impl Stamp for Idd {
 mod tests {
     use super::*;
 
-    fn parse_idd(idd: &Idd) -> node::NodeCollection {
-        node::NodeCollection::from_elems(&vec![Box::new(idd.clone())])
+    fn parse_idd(idd: &Idd) -> NodeCollection {
+        NodeCollection::from_elems(&vec![Box::new(idd.clone())])
     }
 
     fn test_idd(nodes: &[&str]) -> Idd {

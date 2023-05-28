@@ -1,6 +1,6 @@
-use crate::device::spice_fn::SpiceFn;
 use crate::device::{GType, Stamp};
 use crate::node_collection::NodeCollection;
+use crate::spice_fn::SpiceFn;
 
 #[derive(Debug, Clone)]
 pub struct Vdd {
@@ -94,8 +94,8 @@ impl Stamp for Vdd {
 mod tests {
     use super::*;
 
-    fn parse_vdd(vdd: &Vdd) -> node::NodeCollection {
-        node::NodeCollection::from_elems(&vec![Box::new(vdd.clone())])
+    fn parse_vdd(vdd: &Vdd) -> NodeCollection {
+        NodeCollection::from_elems(&vec![Box::new(vdd.clone())])
     }
 
     fn test_vdd(nodes: &[&str]) -> Vdd {
