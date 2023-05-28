@@ -1,4 +1,4 @@
-use crate::node;
+use crate::node_collection::NodeCollection;
 
 pub mod cap;
 pub mod diode;
@@ -38,17 +38,11 @@ pub trait Stamp {
 
     fn eval_tran(&mut self, _t: &f64) {}
 
-    fn linear_stamp(
-        &self,
-        _nodes: &node::NodeCollection,
-        _a: &mut Vec<Vec<f64>>,
-        _b: &mut Vec<f64>,
-    ) {
-    }
+    fn linear_stamp(&self, _nodes: &NodeCollection, _a: &mut Vec<Vec<f64>>, _b: &mut Vec<f64>) {}
 
     fn undo_linear_stamp(
         &self,
-        _nodes: &node::NodeCollection,
+        _nodes: &NodeCollection,
         _a: &mut Vec<Vec<f64>>,
         _b: &mut Vec<f64>,
     ) {
@@ -56,7 +50,7 @@ pub trait Stamp {
 
     fn linear_startup_stamp(
         &self,
-        nodes: &node::NodeCollection,
+        nodes: &NodeCollection,
         a: &mut Vec<Vec<f64>>,
         b: &mut Vec<f64>,
     ) {
@@ -65,20 +59,20 @@ pub trait Stamp {
 
     fn undo_linear_startup_stamp(
         &self,
-        nodes: &node::NodeCollection,
+        nodes: &NodeCollection,
         a: &mut Vec<Vec<f64>>,
         b: &mut Vec<f64>,
     ) {
         self.undo_linear_stamp(nodes, a, b);
     }
 
-    fn init_state(&mut self, _nodes: &node::NodeCollection, _x: &Vec<f64>) {}
+    fn init_state(&mut self, _nodes: &NodeCollection, _x: &Vec<f64>) {}
 
-    fn update_state(&mut self, _nodes: &node::NodeCollection, _x: &Vec<f64>, _h: &f64) {}
+    fn update_state(&mut self, _nodes: &NodeCollection, _x: &Vec<f64>, _h: &f64) {}
 
     fn dynamic_stamp(
         &self,
-        _nodes: &node::NodeCollection,
+        _nodes: &NodeCollection,
         _x: &Vec<f64>,
         _h: &f64,
         _a: &mut Vec<Vec<f64>>,
@@ -88,7 +82,7 @@ pub trait Stamp {
 
     fn undo_dynamic_stamp(
         &self,
-        _nodes: &node::NodeCollection,
+        _nodes: &NodeCollection,
         _x: &Vec<f64>,
         _h: &f64,
         _a: &mut Vec<Vec<f64>>,
@@ -102,7 +96,7 @@ pub trait Stamp {
 
     fn nonlinear_funcs(
         &self,
-        _nodes: &node::NodeCollection,
+        _nodes: &NodeCollection,
         _h_mat: &mut Vec<Vec<f64>>,
         _g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
     ) {
@@ -110,7 +104,7 @@ pub trait Stamp {
 
     fn nonlinear_stamp(
         &self,
-        _nodes: &node::NodeCollection,
+        _nodes: &NodeCollection,
         _x: &Vec<f64>,
         _a: &mut Vec<Vec<f64>>,
         _b: &mut Vec<f64>,

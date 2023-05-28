@@ -8,6 +8,7 @@ mod command;
 mod device;
 mod engine;
 mod node;
+mod node_collection;
 mod parser;
 
 fn main() {

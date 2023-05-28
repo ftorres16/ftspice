@@ -3,7 +3,7 @@ use crate::engine::linalg;
 use crate::engine::mna::MNA;
 use crate::engine::newtons_method;
 use crate::engine::node_vec_norm::NodeVecNorm;
-use crate::node::NodeCollection;
+use crate::node_collection::NodeCollection;
 
 pub const T_STEP_MIN: f64 = 1e-15;
 

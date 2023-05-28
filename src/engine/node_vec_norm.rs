@@ -1,4 +1,5 @@
-use crate::node::{NodeCollection, NodeType};
+use crate::node::NodeType;
+use crate::node_collection::NodeCollection;
 
 #[derive(Debug, Clone)]
 pub struct NodeVecNorm {

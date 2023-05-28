@@ -1,5 +1,5 @@
 use crate::device::{GType, Stamp};
-use crate::node;
+use crate::node_collection::NodeCollection;
 
 mod model;
 
@@ -36,7 +36,7 @@ impl Stamp for NMOS {
 
     fn nonlinear_funcs(
         &self,
-        nodes: &node::NodeCollection,
+        nodes: &NodeCollection,
         h_mat: &mut Vec<Vec<f64>>,
         g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
     ) {
@@ -106,7 +106,7 @@ impl Stamp for NMOS {
 
     fn nonlinear_stamp(
         &self,
-        nodes: &node::NodeCollection,
+        nodes: &NodeCollection,
         x: &Vec<f64>,
         a: &mut Vec<Vec<f64>>,
         b: &mut Vec<f64>,

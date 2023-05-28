@@ -4,7 +4,7 @@ use crate::command;
 use crate::device::Stamp;
 use crate::engine::mna::MNA;
 use crate::engine::transient::T_STEP_MIN;
-use crate::node;
+use crate::node_collection::NodeCollection;
 
 mod gauss_lu;
 mod linalg;
@@ -53,8 +53,8 @@ impl Engine {
         }
     }
 
-    pub fn run_op(&mut self) -> (u64, node::NodeCollection, Vec<f64>) {
-        let nodes = node::NodeCollection::from_startup_elems(&self.elems);
+    pub fn run_op(&mut self) -> (u64, NodeCollection, Vec<f64>) {
+        let nodes = NodeCollection::from_startup_elems(&self.elems);
 
         let mut mna = MNA::new(nodes.len(), self.num_nonlinear_funcs);
 
@@ -73,7 +73,7 @@ impl Engine {
         (n_iters, nodes, x)
     }
 
-    pub fn run_dc(&mut self) -> (Vec<u64>, node::NodeCollection, Vec<Vec<f64>>) {
+    pub fn run_dc(&mut self) -> (Vec<u64>, NodeCollection, Vec<Vec<f64>>) {
         let dc_params = match &self.dc_cmd {
             Some(command::Command::DC(x)) => x,
             _ => panic!("DC simulation wrongly configured."),
@@ -85,7 +85,7 @@ impl Engine {
             .position(|e| e.get_name() == dc_params.source)
             .expect("Sweep source not found");
 
-        let nodes = node::NodeCollection::from_elems(&self.elems);
+        let nodes = NodeCollection::from_elems(&self.elems);
         let mut mna = MNA::new(nodes.len(), self.num_nonlinear_funcs);
 
         for elem in self.elems.iter() {
@@ -121,13 +121,13 @@ impl Engine {
         (n_iters_hist, nodes, x_hist)
     }
 
-    pub fn run_tran(&mut self) -> (Vec<u64>, node::NodeCollection, Vec<f64>, Vec<Vec<f64>>) {
+    pub fn run_tran(&mut self) -> (Vec<u64>, NodeCollection, Vec<f64>, Vec<Vec<f64>>) {
         let tran_params = match &self.tran_cmd {
             Some(command::Command::Tran(x)) => x.to_owned(),
             _ => panic!("DC simulation wrongly configured."),
         };
 
-        let nodes = node::NodeCollection::from_elems(&self.elems);
+        let nodes = NodeCollection::from_elems(&self.elems);
         let mut mna = MNA::new(nodes.len(), self.num_nonlinear_funcs);
         let mut x = mna.get_x();
 
