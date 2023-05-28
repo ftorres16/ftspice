@@ -1,6 +1,6 @@
-use crate::device::spice_fn::SpiceFn;
 use crate::device::{GType, Stamp};
 use crate::node_collection::NodeCollection;
+use crate::spice_fn::SpiceFn;
 
 #[derive(Debug, Clone)]
 pub struct Idd {

@@ -2,8 +2,8 @@ use std::fs;
 
 use crate::command;
 use crate::device;
-use crate::device::spice_fn::{ExpParams, PulseParams, SineParams, SpiceFn};
 use crate::device::Stamp;
+use crate::spice_fn::{ExpParams, PulseParams, SineParams, SpiceFn};
 
 use pest::iterators::Pair;
 use pest::Parser;
