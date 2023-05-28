@@ -54,7 +54,12 @@ impl Stamp for NMOS {
             h_mat[i][g_vec.len() + 2] = 1.0;
         }
 
-        g_vec.push(Box::new(move |x: &Vec<f64>| {
+        fn get_model(
+            vd_idx: Option<usize>,
+            vg_idx: Option<usize>,
+            vs_idx: Option<usize>,
+            x: &Vec<f64>,
+        ) -> model::Model {
             let mut vd = vd_idx.map_or(0.0, |i| x[i]);
             let vg = vg_idx.map_or(0.0, |i| x[i]);
             let mut vs = vs_idx.map_or(0.0, |i| x[i]);
@@ -63,43 +68,19 @@ impl Stamp for NMOS {
                 (vs, vd) = (vd, vs);
             }
 
-            let m = model::Model {
-                vd: vd,
-                vg: vg,
-                vs: vs,
-            };
+            model::Model { vd, vg, vs }
+        }
+
+        g_vec.push(Box::new(move |x: &Vec<f64>| {
+            let m = get_model(vd_idx, vg_idx, vs_idx, x);
             m.id()
         }));
         g_vec.push(Box::new(move |x: &Vec<f64>| {
-            let mut vd = vd_idx.map_or(0.0, |i| x[i]);
-            let vg = vg_idx.map_or(0.0, |i| x[i]);
-            let mut vs = vs_idx.map_or(0.0, |i| x[i]);
-
-            if vs > vd {
-                (vs, vd) = (vd, vs);
-            }
-
-            let m = model::Model {
-                vd: vd,
-                vg: vg,
-                vs: vs,
-            };
+            let m = get_model(vd_idx, vg_idx, vs_idx, x);
             m.ig()
         }));
         g_vec.push(Box::new(move |x: &Vec<f64>| {
-            let mut vd = vd_idx.map_or(0.0, |i| x[i]);
-            let vg = vg_idx.map_or(0.0, |i| x[i]);
-            let mut vs = vs_idx.map_or(0.0, |i| x[i]);
-
-            if vs > vd {
-                (vs, vd) = (vd, vs);
-            }
-
-            let m = model::Model {
-                vd: vd,
-                vg: vg,
-                vs: vs,
-            };
+            let m = get_model(vd_idx, vg_idx, vs_idx, x);
             m.is()
         }));
     }
@@ -124,11 +105,7 @@ impl Stamp for NMOS {
             (vd_idx, vs_idx) = (vs_idx, vd_idx);
         }
 
-        let m = model::Model {
-            vd: vd,
-            vg: vg,
-            vs: vs,
-        };
+        let m = model::Model { vd, vg, vs };
 
         let gds = m.gds();
         let gm = m.gm();

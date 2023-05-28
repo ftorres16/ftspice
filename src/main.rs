@@ -21,6 +21,8 @@ fn main() {
 
     let (elems, cmds) = parser::parse_spice_file(file);
 
+    parser::check_elems::check_elems(&elems);
+
     let mut engine = engine::Engine::new(elems, cmds);
 
     if let Some(_) = engine.op_cmd {

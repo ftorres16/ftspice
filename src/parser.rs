@@ -8,6 +8,8 @@ use crate::spice_fn::{ExpParams, PulseParams, SineParams, SpiceFn};
 use pest::iterators::Pair;
 use pest::Parser;
 
+pub mod check_elems;
+
 #[derive(Parser)]
 #[grammar = "spice.pest"]
 pub struct SpiceParser;
