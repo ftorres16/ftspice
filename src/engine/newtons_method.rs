@@ -3,7 +3,7 @@ use crate::engine::gauss_lu;
 use crate::engine::linalg::{vec_add, vec_sub};
 use crate::engine::mna::MNA;
 use crate::engine::node_vec_norm::NodeVecNorm;
-use crate::node;
+use crate::node_collection::NodeCollection;
 
 pub const MAX_ITERS: u64 = 100;
 
@@ -15,7 +15,7 @@ const DAMPING_GAMMA: f64 = 1.3;
 const DAMPING_K: f64 = 16.0;
 
 pub fn solve(
-    nodes: &node::NodeCollection,
+    nodes: &NodeCollection,
     elems: &Vec<Box<dyn Stamp>>,
     x: &mut Vec<f64>,
     mna: &MNA,

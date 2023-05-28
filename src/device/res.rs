@@ -1,5 +1,5 @@
 use crate::device::{GType, Stamp};
-use crate::node;
+use crate::node_collection::NodeCollection;
 
 #[derive(Debug, Clone)]
 pub struct Res {
@@ -29,7 +29,7 @@ impl Stamp for Res {
         self.val = value;
     }
 
-    fn linear_stamp(&self, nodes: &node::NodeCollection, a: &mut Vec<Vec<f64>>, _b: &mut Vec<f64>) {
+    fn linear_stamp(&self, nodes: &NodeCollection, a: &mut Vec<Vec<f64>>, _b: &mut Vec<f64>) {
         let g = 1.0 / self.val;
 
         let vneg_node = nodes.get_idx(&self.nodes[0]);
@@ -47,12 +47,7 @@ impl Stamp for Res {
         }
     }
 
-    fn undo_linear_stamp(
-        &self,
-        nodes: &node::NodeCollection,
-        a: &mut Vec<Vec<f64>>,
-        _b: &mut Vec<f64>,
-    ) {
+    fn undo_linear_stamp(&self, nodes: &NodeCollection, a: &mut Vec<Vec<f64>>, _b: &mut Vec<f64>) {
         let g = 1.0 / self.val;
 
         let vneg_node = nodes.get_idx(&self.nodes[0]);

@@ -1,6 +1,6 @@
 use crate::device::spice_fn::SpiceFn;
 use crate::device::{GType, Stamp};
-use crate::node;
+use crate::node_collection::NodeCollection;
 
 #[derive(Debug, Clone)]
 pub struct Vdd {
@@ -45,7 +45,7 @@ impl Stamp for Vdd {
         }
     }
 
-    fn linear_stamp(&self, nodes: &node::NodeCollection, a: &mut Vec<Vec<f64>>, b: &mut Vec<f64>) {
+    fn linear_stamp(&self, nodes: &NodeCollection, a: &mut Vec<Vec<f64>>, b: &mut Vec<f64>) {
         let vneg_idx = nodes.get_idx(&self.nodes[0]);
         let vpos_idx = nodes.get_idx(&self.nodes[1]);
         let is_idx = nodes
@@ -65,12 +65,7 @@ impl Stamp for Vdd {
         }
     }
 
-    fn undo_linear_stamp(
-        &self,
-        nodes: &node::NodeCollection,
-        a: &mut Vec<Vec<f64>>,
-        b: &mut Vec<f64>,
-    ) {
+    fn undo_linear_stamp(&self, nodes: &NodeCollection, a: &mut Vec<Vec<f64>>, b: &mut Vec<f64>) {
         let vneg_idx = nodes.get_idx(&self.nodes[0]);
         let vpos_idx = nodes.get_idx(&self.nodes[1]);
         let is_idx = nodes

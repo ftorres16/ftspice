@@ -1,5 +1,5 @@
 use crate::device::{GType, Stamp};
-use crate::node::NodeCollection;
+use crate::node_collection::NodeCollection;
 
 mod model;
 

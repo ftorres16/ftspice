@@ -1,16 +1,18 @@
+use std::collections::HashMap;
 use std::iter::successors;
 
 use crate::command;
 use crate::device::Stamp;
 use crate::engine::mna::MNA;
 use crate::engine::transient::T_STEP_MIN;
-use crate::node;
+use crate::node_collection::NodeCollection;
 
 mod gauss_lu;
 mod linalg;
 mod mna;
 mod newtons_method;
 mod node_vec_norm;
+mod sim_result;
 mod transient;
 
 pub struct Engine {
@@ -53,8 +55,8 @@ impl Engine {
         }
     }
 
-    pub fn run_op(&mut self) -> (u64, node::NodeCollection, Vec<f64>) {
-        let nodes = node::NodeCollection::from_startup_elems(&self.elems);
+    pub fn run_op(&mut self) -> sim_result::SimResult {
+        let nodes = NodeCollection::from_startup_elems(&self.elems);
 
         let mut mna = MNA::new(nodes.len(), self.num_nonlinear_funcs);
 
@@ -70,10 +72,20 @@ impl Engine {
             elem.init_state(&nodes, &x);
         }
 
-        (n_iters, nodes, x)
+        let mut headers = vec!["n_iters"];
+        headers.extend(nodes.keys().map(String::as_str).collect::<Vec<_>>());
+        let mut res = sim_result::SimResult::new(&headers);
+
+        let mut record = HashMap::from([(String::from("n_iters"), n_iters as f64)]);
+        for (name, node) in nodes.iter() {
+            record.insert(String::from(name), x[node.idx]);
+        }
+        res.push(record);
+
+        res
     }
 
-    pub fn run_dc(&mut self) -> (Vec<u64>, node::NodeCollection, Vec<Vec<f64>>) {
+    pub fn run_dc(&mut self) -> sim_result::SimResult {
         let dc_params = match &self.dc_cmd {
             Some(command::Command::DC(x)) => x,
             _ => panic!("DC simulation wrongly configured."),
@@ -85,7 +97,7 @@ impl Engine {
             .position(|e| e.get_name() == dc_params.source)
             .expect("Sweep source not found");
 
-        let nodes = node::NodeCollection::from_elems(&self.elems);
+        let nodes = NodeCollection::from_elems(&self.elems);
         let mut mna = MNA::new(nodes.len(), self.num_nonlinear_funcs);
 
         for elem in self.elems.iter() {
@@ -93,8 +105,9 @@ impl Engine {
             elem.nonlinear_funcs(&nodes, &mut mna.h, &mut mna.g);
         }
 
-        let mut x_hist = Vec::new();
-        let mut n_iters_hist = Vec::new();
+        let mut headers = vec!["n_iters"];
+        headers.extend(nodes.keys().map(String::as_str).collect::<Vec<_>>());
+        let mut res = sim_result::SimResult::new(&headers);
 
         let mut x = mna.get_x();
 
@@ -112,22 +125,26 @@ impl Engine {
 
             let n_iters = newtons_method::solve(&nodes, &self.elems, &mut x, &mna);
 
-            n_iters_hist.push(n_iters);
-            x_hist.push(x.clone());
+            let mut record = HashMap::new();
+            for (name, node) in nodes.iter() {
+                record.insert(String::from(name), x[node.idx]);
+            }
+            record.insert(String::from("n_iters"), n_iters as f64);
+            res.push(record);
         }
 
         self.elems[sweep_idx].set_value(val_bkp);
 
-        (n_iters_hist, nodes, x_hist)
+        res
     }
 
-    pub fn run_tran(&mut self) -> (Vec<u64>, node::NodeCollection, Vec<f64>, Vec<Vec<f64>>) {
+    pub fn run_tran(&mut self) -> sim_result::SimResult {
         let tran_params = match &self.tran_cmd {
             Some(command::Command::Tran(x)) => x.to_owned(),
             _ => panic!("DC simulation wrongly configured."),
         };
 
-        let nodes = node::NodeCollection::from_elems(&self.elems);
+        let nodes = NodeCollection::from_elems(&self.elems);
         let mut mna = MNA::new(nodes.len(), self.num_nonlinear_funcs);
         let mut x = mna.get_x();
 
@@ -137,12 +154,9 @@ impl Engine {
         }
 
         // Load Start Up solutions
-        let (_, startup_nodes, startup_x) = self.run_op();
+        let startup_res = self.run_op();
         for (name, node) in nodes.iter() {
-            let old_idx = startup_nodes
-                .get_idx(name)
-                .expect("New node not found in startup nodes.");
-            x[node.idx] = startup_x[old_idx];
+            x[node.idx] = startup_res.get(name)[0];
         }
 
         let mut state_hist = Vec::new();
@@ -172,11 +186,21 @@ impl Engine {
             h = next_h;
         }
 
-        (
-            state_hist.iter().map(|s| s.n_iters).collect(),
-            nodes,
-            state_hist.iter().map(|s| s.t).collect(),
-            state_hist.iter().map(|s| s.x.clone()).collect(),
-        )
+        let mut headers = vec!["n_iters", "t"];
+        headers.extend(nodes.keys().map(String::as_str).collect::<Vec<_>>());
+        let mut res = sim_result::SimResult::new(&headers);
+
+        for step in state_hist.iter() {
+            let mut record = HashMap::from([
+                (String::from("n_iters"), step.n_iters as f64),
+                (String::from("t"), step.t as f64),
+            ]);
+            for (name, node) in nodes.iter() {
+                record.insert(String::from(name), step.x[node.idx]);
+            }
+            res.push(record);
+        }
+
+        res
     }
 }
