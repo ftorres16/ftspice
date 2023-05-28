@@ -95,8 +95,8 @@ impl Stamp for Diode {
 mod tests {
     use super::*;
 
-    fn parse_dio(dio: &Diode) -> node::NodeCollection {
-        node::NodeCollection::from_elems(&vec![Box::new(dio.clone())])
+    fn parse_dio(dio: &Diode) -> NodeCollection {
+        NodeCollection::from_elems(&vec![Box::new(dio.clone())])
     }
 
     #[test]

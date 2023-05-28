@@ -76,8 +76,8 @@ impl Stamp for Idd {
 mod tests {
     use super::*;
 
-    fn parse_idd(idd: &Idd) -> node::NodeCollection {
-        node::NodeCollection::from_elems(&vec![Box::new(idd.clone())])
+    fn parse_idd(idd: &Idd) -> NodeCollection {
+        NodeCollection::from_elems(&vec![Box::new(idd.clone())])
     }
 
     fn test_idd(nodes: &[&str]) -> Idd {

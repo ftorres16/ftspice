@@ -148,8 +148,8 @@ impl Stamp for NPN {
 mod tests {
     use super::*;
 
-    fn parse_npn(q: &NPN) -> node::NodeCollection {
-        node::NodeCollection::from_elems(&vec![Box::new(q.clone())])
+    fn parse_npn(q: &NPN) -> NodeCollection {
+        NodeCollection::from_elems(&vec![Box::new(q.clone())])
     }
 
     #[test]

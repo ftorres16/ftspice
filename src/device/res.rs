@@ -70,8 +70,8 @@ impl Stamp for Res {
 mod tests {
     use super::*;
 
-    fn parse_res(res: &Res) -> node::NodeCollection {
-        node::NodeCollection::from_elems(&vec![Box::new(res.clone())])
+    fn parse_res(res: &Res) -> NodeCollection {
+        NodeCollection::from_elems(&vec![Box::new(res.clone())])
     }
 
     #[test]
