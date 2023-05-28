@@ -4,7 +4,7 @@ pub fn solve(a_mat: &mut Vec<Vec<f64>>, b_vec: &mut Vec<f64>, x_vec: &mut Vec<f6
         let mut max_idx = curr_row;
         let mut max_val = a_mat[curr_row][curr_row].abs();
 
-        for next_row in curr_row + 1..a_mat.len() {
+        for next_row in (curr_row + 1)..a_mat.len() {
             let next_val = a_mat[next_row][curr_row].abs();
 
             if next_val > max_val {
@@ -19,12 +19,12 @@ pub fn solve(a_mat: &mut Vec<Vec<f64>>, b_vec: &mut Vec<f64>, x_vec: &mut Vec<f6
         }
 
         // Scale
-        for next_row in curr_row + 1..a_mat.len() {
+        for next_row in (curr_row + 1)..a_mat.len() {
             a_mat[next_row][curr_row] /= a_mat[curr_row][curr_row];
         }
         // Subtract
-        for next_row in curr_row + 1..a_mat.len() {
-            for next_col in curr_row + 1..a_mat.len() {
+        for next_row in (curr_row + 1)..a_mat.len() {
+            for next_col in (curr_row + 1)..a_mat.len() {
                 a_mat[next_row][next_col] -= a_mat[next_row][curr_row] * a_mat[curr_row][next_col];
             }
 
