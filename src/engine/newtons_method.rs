@@ -1,6 +1,7 @@
+use ndarray::prelude::*;
+
 use crate::device::Stamp;
 use crate::engine::gauss_lu;
-use crate::engine::linalg::{vec_add, vec_sub};
 use crate::engine::mna::MNA;
 use crate::engine::node_vec_norm::NodeVecNorm;
 use crate::node_collection::NodeCollection;
@@ -17,7 +18,7 @@ const DAMPING_K: f64 = 16.0;
 pub fn solve(
     nodes: &NodeCollection,
     elems: &Vec<Box<dyn Stamp>>,
-    x: &mut Vec<f64>,
+    x: &mut Array1<f64>,
     mna: &MNA,
 ) -> u64 {
     let mut err = NodeVecNorm::infty();
@@ -40,11 +41,11 @@ pub fn solve(
 
         gauss_lu::solve(&mut jf_mat, &mut b_temp, &mut x_proposed);
 
-        let step_proposed = vec_sub(&x_proposed, &x);
+        let step_proposed = &x_proposed.view() - &x.view();
         let step_taken = dampen_step(&step_proposed);
         step = NodeVecNorm::new(nodes, &step_taken);
 
-        let x_new = vec_add(&x, &step_taken);
+        let x_new = &x.view() + &step_taken;
 
         f0 = mna.get_err(&x_new);
         err = NodeVecNorm::new(nodes, &f0);
@@ -64,10 +65,10 @@ pub fn solve(
     n_iters
 }
 
-fn dampen_step(step: &[f64]) -> Vec<f64> {
+fn dampen_step(step: &Array1<f64>) -> Array1<f64> {
     step.iter()
         .map(|x| DAMPING_GAMMA / DAMPING_K * x.signum() * (DAMPING_K * x.abs()).ln_1p())
-        .collect::<Vec<_>>()
+        .collect()
 }
 
 fn converged(
@@ -88,7 +89,7 @@ mod tests {
 
     #[test]
     fn test_dampen_step() {
-        let step = vec![1.0, 2.0, 3.0];
+        let step = array![1.0, 2.0, 3.0];
         let small_step = dampen_step(&step);
 
         for (old, new) in step.iter().zip(&small_step) {

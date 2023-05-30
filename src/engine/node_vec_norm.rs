@@ -1,3 +1,5 @@
+use ndarray::prelude::*;
+
 use crate::node::NodeType;
 use crate::node_collection::NodeCollection;
 
@@ -8,7 +10,7 @@ pub struct NodeVecNorm {
 }
 
 impl NodeVecNorm {
-    pub fn new(nodes: &NodeCollection, v: &Vec<f64>) -> Self {
+    pub fn new(nodes: &NodeCollection, v: &Array1<f64>) -> Self {
         let v_nodes = nodes
             .values()
             .filter(|x| matches!(x.ntype, NodeType::Voltage))

@@ -1,3 +1,5 @@
+use ndarray::prelude::*;
+
 use crate::device::{GType, Stamp};
 use crate::node_collection::NodeCollection;
 use crate::spice_fn::SpiceFn;
@@ -41,7 +43,7 @@ impl Stamp for Vdd {
         }
     }
 
-    fn linear_stamp(&self, nodes: &NodeCollection, a: &mut Vec<Vec<f64>>, b: &mut Vec<f64>) {
+    fn linear_stamp(&self, nodes: &NodeCollection, a: &mut Array2<f64>, b: &mut Array1<f64>) {
         let vneg_idx = nodes.get_idx(&self.nodes[0]);
         let vpos_idx = nodes.get_idx(&self.nodes[1]);
         let is_idx = nodes
@@ -51,17 +53,17 @@ impl Stamp for Vdd {
         b[is_idx] = self.val;
 
         if let Some(i) = vpos_idx {
-            a[is_idx][i] += 1.0;
-            a[i][is_idx] += 1.0;
+            a[(is_idx, i)] += 1.0;
+            a[(i, is_idx)] += 1.0;
         }
 
         if let Some(i) = vneg_idx {
-            a[is_idx][i] -= 1.0;
-            a[i][is_idx] -= 1.0;
+            a[(is_idx, i)] -= 1.0;
+            a[(i, is_idx)] -= 1.0;
         }
     }
 
-    fn undo_linear_stamp(&self, nodes: &NodeCollection, a: &mut Vec<Vec<f64>>, b: &mut Vec<f64>) {
+    fn undo_linear_stamp(&self, nodes: &NodeCollection, a: &mut Array2<f64>, b: &mut Array1<f64>) {
         let vneg_idx = nodes.get_idx(&self.nodes[0]);
         let vpos_idx = nodes.get_idx(&self.nodes[1]);
         let is_idx = nodes
@@ -71,13 +73,13 @@ impl Stamp for Vdd {
         b[is_idx] = 0.0;
 
         if let Some(i) = vpos_idx {
-            a[is_idx][i] -= 1.0;
-            a[i][is_idx] -= 1.0;
+            a[(is_idx, i)] -= 1.0;
+            a[(i, is_idx)] -= 1.0;
         }
 
         if let Some(i) = vneg_idx {
-            a[is_idx][i] += 1.0;
-            a[i][is_idx] += 1.0;
+            a[(is_idx, i)] += 1.0;
+            a[(i, is_idx)] += 1.0;
         }
     }
 
@@ -107,18 +109,18 @@ mod tests {
     fn test_linear_stamp_vdd_node_0_gnd() {
         let vdd = test_vdd(&["0", "1"]);
         let nodes = parse_vdd(&vdd);
-        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
-        let mut b: Vec<f64> = vec![0.0; 2];
+        let mut a = Array2::zeros((2, 2));
+        let mut b = Array1::zeros(2);
 
         vdd.linear_stamp(&nodes, &mut a, &mut b);
 
         let n1 = nodes.get_idx("1").unwrap();
         let v1 = nodes.get_idx("V1").unwrap();
 
-        let mut a_model = vec![vec![0.0; nodes.len()]; nodes.len()];
-        let mut b_model = vec![0.0; nodes.len()];
-        a_model[n1][v1] = 1.0;
-        a_model[v1][n1] = 1.0;
+        let mut a_model = Array2::zeros((nodes.len(), nodes.len()));
+        let mut b_model = Array1::zeros(nodes.len());
+        a_model[(n1, v1)] = 1.0;
+        a_model[(v1, n1)] = 1.0;
         b_model[n1] = 0.0;
         b_model[v1] = 1e-3;
 
@@ -130,18 +132,18 @@ mod tests {
     fn test_linear_stamp_vdd_node_1_gnd() {
         let vdd = test_vdd(&["1", "0"]);
         let nodes = parse_vdd(&vdd);
-        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
-        let mut b: Vec<f64> = vec![0.0; 2];
+        let mut a = Array2::zeros((2, 2));
+        let mut b = Array1::zeros(2);
 
         vdd.linear_stamp(&nodes, &mut a, &mut b);
 
         let n1 = nodes.get_idx("1").unwrap();
         let v1 = nodes.get_idx("V1").unwrap();
 
-        let mut a_model = vec![vec![0.0; nodes.len()]; nodes.len()];
-        let mut b_model = vec![0.0; nodes.len()];
-        a_model[n1][v1] = -1.0;
-        a_model[v1][n1] = -1.0;
+        let mut a_model = Array2::zeros((nodes.len(), nodes.len()));
+        let mut b_model = Array1::zeros(nodes.len());
+        a_model[(n1, v1)] = -1.0;
+        a_model[(v1, n1)] = -1.0;
         b_model[n1] = 0.0;
         b_model[v1] = 1e-3;
 
@@ -153,8 +155,8 @@ mod tests {
     fn test_linear_stamp_vdd_to_nodes() {
         let vdd = test_vdd(&["1", "2"]);
         let nodes = parse_vdd(&vdd);
-        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
-        let mut b: Vec<f64> = vec![0.0; 3];
+        let mut a = Array2::zeros((3, 3));
+        let mut b = Array1::zeros(3);
 
         vdd.linear_stamp(&nodes, &mut a, &mut b);
 
@@ -162,12 +164,12 @@ mod tests {
         let n2 = nodes.get_idx("2").unwrap();
         let v1 = nodes.get_idx("V1").unwrap();
 
-        let mut a_model = vec![vec![0.0; nodes.len()]; nodes.len()];
-        let mut b_model = vec![0.0; nodes.len()];
-        a_model[n1][v1] = -1.0;
-        a_model[v1][n1] = -1.0;
-        a_model[n2][v1] = 1.0;
-        a_model[v1][n2] = 1.0;
+        let mut a_model = Array2::zeros((nodes.len(), nodes.len()));
+        let mut b_model = Array1::zeros(nodes.len());
+        a_model[(n1, v1)] = -1.0;
+        a_model[(v1, n1)] = -1.0;
+        a_model[(n2, v1)] = 1.0;
+        a_model[(v1, n2)] = 1.0;
         b_model[n1] = 0.0;
         b_model[n2] = 0.0;
         b_model[v1] = 1e-3;
@@ -180,22 +182,22 @@ mod tests {
     fn test_undo_linear_stamp() {
         let vdd = test_vdd(&["1", "2"]);
         let nodes = parse_vdd(&vdd);
-        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
-        let mut b: Vec<f64> = vec![0.0; 3];
+        let mut a = Array2::zeros((3, 3));
+        let mut b = Array1::zeros(3);
 
         vdd.linear_stamp(&nodes, &mut a, &mut b);
         vdd.undo_linear_stamp(&nodes, &mut a, &mut b);
 
-        assert_eq!(a, vec![vec![0.0; 3]; 3]);
-        assert_eq!(b, vec![0.0; 3]);
+        assert_eq!(a, Array2::zeros((3, 3)));
+        assert_eq!(b, Array1::zeros(3));
     }
 
     #[test]
     fn test_count_nonlinear_funcs() {
         let vdd = test_vdd(&["1", "2"]);
         let nodes = parse_vdd(&vdd);
-        let mut h: Vec<Vec<f64>> = vec![vec![0.0; 1]; 2];
-        let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
+        let mut h = Array2::zeros((2, 1));
+        let mut g = Vec::new();
 
         vdd.nonlinear_funcs(&nodes, &mut h, &mut g);
 
@@ -206,12 +208,12 @@ mod tests {
     fn test_nonlinear_funcs_() {
         let vdd = test_vdd(&["1", "2"]);
         let nodes = parse_vdd(&vdd);
-        let mut h: Vec<Vec<f64>> = vec![vec![0.0; 1]; 2];
-        let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
+        let mut h = Array2::zeros((2, 1));
+        let mut g = Vec::new();
 
         vdd.nonlinear_funcs(&nodes, &mut h, &mut g);
 
-        assert_eq!(h, [[0.0], [0.0]]);
+        assert_eq!(h, array![[0.0], [0.0]]);
         assert_eq!(g.len(), 0);
     }
 
@@ -219,13 +221,13 @@ mod tests {
     fn test_nonlinear_stamp() {
         let vdd = test_vdd(&["1", "2"]);
         let nodes = parse_vdd(&vdd);
-        let x: Vec<f64> = vec![1.0, 2.0];
-        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
-        let mut b: Vec<f64> = vec![0.0; 2];
+        let x = array![1.0, 2.0];
+        let mut a = Array2::zeros((2, 2));
+        let mut b = Array1::zeros(2);
 
         vdd.nonlinear_stamp(&nodes, &x, &mut a, &mut b);
 
-        assert_eq!(a, [[0.0, 0.0], [0.0, 0.0]]);
-        assert_eq!(b, [0.0, 0.0]);
+        assert_eq!(a, array![[0.0, 0.0], [0.0, 0.0]]);
+        assert_eq!(b, array![0.0, 0.0]);
     }
 }

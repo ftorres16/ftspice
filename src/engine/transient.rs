@@ -1,5 +1,6 @@
+use ndarray::prelude::*;
+
 use crate::device::Stamp;
-use crate::engine::linalg;
 use crate::engine::mna::MNA;
 use crate::engine::newtons_method;
 use crate::engine::node_vec_norm::NodeVecNorm;
@@ -14,7 +15,7 @@ const TOL_ABS_A: f64 = 1e-6;
 #[derive(Debug)]
 pub struct TranStateHistory {
     pub n_iters: u64,
-    pub x: Vec<f64>,
+    pub x: Array1<f64>,
     pub t: f64,
 }
 
@@ -24,7 +25,7 @@ pub fn step(
     mna: &mut MNA,
     t: &f64,
     h: &f64,
-    x: &mut Vec<f64>,
+    x: &mut Array1<f64>,
     state_hist: &mut Vec<TranStateHistory>,
     step_max: &f64,
 ) -> (f64, f64) {
@@ -98,28 +99,20 @@ pub fn step(
     (h, next_h)
 }
 
-fn divided_diff(state_hist: &Vec<TranStateHistory>, n_max: usize, n_min: usize) -> Vec<f64> {
+fn divided_diff(state_hist: &Vec<TranStateHistory>, n_max: usize, n_min: usize) -> Array1<f64> {
     if n_max == n_min {
         state_hist[n_max].x.clone()
     } else {
-        linalg::vec_scalar_prod(
-            &linalg::vec_sub(
-                &divided_diff(state_hist, n_max, n_min + 1),
-                &divided_diff(state_hist, n_max - 1, n_min),
-            ),
-            1.0 / (state_hist[n_max].t - state_hist[n_min].t),
-        )
+        (&divided_diff(state_hist, n_max, n_min + 1) - &divided_diff(state_hist, n_max - 1, n_min))
+            / (state_hist[n_max].t - state_hist[n_min].t)
     }
 }
 
-fn plte_vec(state_hist: &Vec<TranStateHistory>, n: usize) -> Vec<f64> {
+fn plte_vec(state_hist: &Vec<TranStateHistory>, n: usize) -> Array1<f64> {
     let c3 = -1.0 / 12.0;
     let h_next = state_hist[n + 1].t - state_hist[n].t;
 
-    linalg::vec_scalar_prod(
-        &divided_diff(state_hist, n + 1, n - 2),
-        6.0 * c3 * h_next.powi(3),
-    )
+    &divided_diff(state_hist, n + 1, n - 2) * 6.0 * c3 * h_next.powi(3)
 }
 
 fn plte_is_too_big(plte: &NodeVecNorm, x: &NodeVecNorm) -> bool {
