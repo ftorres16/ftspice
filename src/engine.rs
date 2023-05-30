@@ -4,11 +4,14 @@ use ndarray::prelude::*;
 
 use crate::command;
 use crate::device::Stamp;
+use crate::engine::error::NotConvergedError;
 use crate::engine::mna::MNA;
+use crate::engine::sim_result::SimResult;
 use crate::engine::transient::state_history::StateHistory;
 use crate::engine::transient::T_STEP_MIN;
 use crate::node_collection::NodeCollection;
 
+pub mod error;
 mod gauss_lu;
 mod mna;
 mod newtons_method;
@@ -56,7 +59,7 @@ impl Engine {
         }
     }
 
-    pub fn run_op(&mut self) -> sim_result::SimResult {
+    pub fn run_op(&mut self) -> Result<SimResult, NotConvergedError> {
         let nodes = NodeCollection::from_startup_elems(&self.elems);
 
         let mut mna = MNA::new(nodes.len(), self.num_nonlinear_funcs);
@@ -67,7 +70,7 @@ impl Engine {
         }
 
         let mut x = mna.get_x();
-        let n_iters = newtons_method::solve(&nodes, &self.elems, &mut x, &mna);
+        let n_iters = newtons_method::solve(&nodes, &self.elems, &mut x, &mna)?;
 
         for elem in self.elems.iter_mut() {
             elem.init_state(&nodes, &x);
@@ -83,10 +86,10 @@ impl Engine {
         }
         res.push(record);
 
-        res
+        Ok(res)
     }
 
-    pub fn run_dc(&mut self) -> sim_result::SimResult {
+    pub fn run_dc(&mut self) -> Result<SimResult, NotConvergedError> {
         let dc_params = match &self.dc_cmd {
             Some(command::Command::DC(x)) => x,
             _ => panic!("DC simulation wrongly configured."),
@@ -121,7 +124,7 @@ impl Engine {
             self.elems[sweep_idx].set_value(sweep_val);
             self.elems[sweep_idx].linear_stamp(&nodes, &mut mna.a, &mut mna.b);
 
-            let n_iters = newtons_method::solve(&nodes, &self.elems, &mut x, &mna);
+            let n_iters = newtons_method::solve(&nodes, &self.elems, &mut x, &mna)?;
 
             let mut record = HashMap::new();
             for (name, node) in nodes.iter() {
@@ -133,10 +136,10 @@ impl Engine {
 
         self.elems[sweep_idx].set_value(val_bkp);
 
-        res
+        Ok(res)
     }
 
-    pub fn run_tran(&mut self) -> sim_result::SimResult {
+    pub fn run_tran(&mut self) -> Result<SimResult, NotConvergedError> {
         let tran_params = match &self.tran_cmd {
             Some(command::Command::Tran(x)) => x.to_owned(),
             _ => panic!("DC simulation wrongly configured."),
@@ -152,7 +155,7 @@ impl Engine {
         }
 
         // Load Start Up solutions
-        let startup_res = self.run_op();
+        let startup_res = self.run_op()?;
         for (name, node) in nodes.iter() {
             x[node.idx] = startup_res.get(name)[0];
         }
@@ -173,7 +176,7 @@ impl Engine {
                 &mut x,
                 &mut state_hist,
                 &tran_params.step,
-            );
+            )?;
 
             t += h;
 
@@ -199,6 +202,6 @@ impl Engine {
             res.push(record);
         }
 
-        res
+        Ok(res)
     }
 }

@@ -1,6 +1,7 @@
 use ndarray::prelude::*;
 
 use crate::device::Stamp;
+use crate::engine::error::NotConvergedError;
 use crate::engine::gauss_lu;
 use crate::engine::mna::MNA;
 use crate::engine::node_vec_norm::NodeVecNorm;
@@ -20,7 +21,7 @@ pub fn solve(
     elems: &Vec<Box<dyn Stamp>>,
     x: &mut Array1<f64>,
     mna: &MNA,
-) -> u64 {
+) -> Result<u64, NotConvergedError> {
     let mut err = NodeVecNorm::infty();
     let mut step = NodeVecNorm::infty();
 
@@ -62,7 +63,11 @@ pub fn solve(
         step_old = step.clone();
     }
 
-    n_iters
+    if n_iters < MAX_ITERS {
+        Ok(n_iters)
+    } else {
+        Err(NotConvergedError)
+    }
 }
 
 fn dampen_step(step: &Array1<f64>) -> Array1<f64> {

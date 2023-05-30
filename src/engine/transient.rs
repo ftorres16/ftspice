@@ -1,6 +1,7 @@
 use ndarray::prelude::*;
 
 use crate::device::Stamp;
+use crate::engine::error::NotConvergedError;
 use crate::engine::mna::MNA;
 use crate::engine::newtons_method;
 use crate::engine::node_vec_norm::NodeVecNorm;
@@ -23,7 +24,7 @@ pub fn step(
     x: &mut Array1<f64>,
     state_hist: &mut state_history::StateHistory,
     step_max: &f64,
-) -> (f64, f64) {
+) -> Result<(f64, f64), NotConvergedError> {
     let mut h = h.to_owned();
     let mut next_h = h;
     let mut step_accepted = false;
@@ -46,28 +47,34 @@ pub fn step(
 
         let n_iters = newtons_method::solve(nodes, elems, x, &mna);
 
-        state_hist.push(n_iters, &x, t + h);
-
-        if n_iters >= newtons_method::MAX_ITERS {
-            h /= 2.0;
-        } else if state_hist.len() < 4 {
-            next_h = h;
-            step_accepted = true;
-        } else {
-            let plte = state_hist.plte(state_hist.len() - 2);
-
-            let plte_norm = NodeVecNorm::new(nodes, &plte);
-            let x_norm = NodeVecNorm::new(nodes, &x);
-
-            if plte_is_too_big(&plte_norm, &x_norm) {
+        match n_iters {
+            Err(NotConvergedError) => {
                 h /= 2.0;
-            } else {
+                step_accepted = false;
+            }
+            Ok(n_iters) if state_hist.len() < 3 => {
+                state_hist.push(n_iters, &x, t + h);
+                next_h = h;
                 step_accepted = true;
+            }
+            Ok(n_iters) => {
+                state_hist.push(n_iters, &x, t + h);
 
-                if plte_can_grow(&plte_norm) && h <= step_max / 2.0 {
-                    next_h = h * 2.0;
+                let plte = state_hist.plte(state_hist.len() - 2);
+                let plte_norm = NodeVecNorm::new(nodes, &plte);
+                let x_norm = NodeVecNorm::new(nodes, &x);
+
+                step_accepted = !plte_is_too_big(&plte_norm, &x_norm);
+
+                if !step_accepted {
+                    h /= 2.0;
+                    state_hist.pop();
                 } else {
-                    next_h = h;
+                    next_h = if plte_can_grow(&plte_norm) && h <= step_max / 2.0 {
+                        h * 2.0
+                    } else {
+                        h
+                    }
                 }
             }
         }
@@ -76,18 +83,17 @@ pub fn step(
             for elem in elems.iter_mut() {
                 elem.undo_dynamic_stamp(&nodes, &x, &h, &mut mna.a, &mut mna.b);
             }
-            state_hist.pop();
         }
 
         if h < T_STEP_MIN {
-            panic!("Timestep too small!");
+            return Err(NotConvergedError);
         }
     }
 
     mna.a = a_bkp;
     mna.b = b_bkp;
 
-    (h, next_h)
+    Ok((h, next_h))
 }
 
 fn plte_is_too_big(plte: &NodeVecNorm, x: &NodeVecNorm) -> bool {
