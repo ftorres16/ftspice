@@ -137,7 +137,7 @@ mod tests {
     use super::*;
 
     fn parse_npn(q: &NPN) -> NodeCollection {
-        NodeCollection::from_elems(&vec![Box::new(q.clone())])
+        NodeCollection::from_elems(&[Box::new(q.clone())])
     }
 
     #[test]

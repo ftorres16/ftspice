@@ -96,7 +96,7 @@ mod tests {
     use super::*;
 
     fn parse_dio(dio: &Diode) -> NodeCollection {
-        NodeCollection::from_elems(&vec![Box::new(dio.clone())])
+        NodeCollection::from_elems(&[Box::new(dio.clone())])
     }
 
     #[test]

@@ -3,17 +3,17 @@ use std::collections::HashSet;
 use crate::device::Stamp;
 use crate::node::GND;
 
-pub fn check_elems(elems: &Vec<Box<dyn Stamp>>) {
+pub fn check_elems(elems: &[Box<dyn Stamp>]) {
     check_duplicate_names(elems);
     check_gnd(elems);
 }
 
-fn check_duplicate_names(elems: &Vec<Box<dyn Stamp>>) {
+fn check_duplicate_names(elems: &[Box<dyn Stamp>]) {
     let names = elems.iter().map(|x| x.get_name()).collect::<HashSet<_>>();
     assert_eq!(names.len(), elems.len(), "Duplicate elems found!");
 }
 
-fn check_gnd(elems: &Vec<Box<dyn Stamp>>) {
+fn check_gnd(elems: &[Box<dyn Stamp>]) {
     elems
         .iter()
         .flat_map(|e| e.get_nodes().iter())
