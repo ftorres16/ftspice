@@ -29,12 +29,12 @@ impl StateHistory {
         });
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &Record> {
-        self.data.iter()
-    }
-
     pub fn pop(&mut self) -> Option<Record> {
         self.data.pop()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &Record> {
+        self.data.iter()
     }
 
     pub fn plte(&self, n: usize) -> Array1<f64> {
