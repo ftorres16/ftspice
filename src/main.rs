@@ -2,9 +2,10 @@ use std::env;
 
 extern crate ndarray;
 extern crate pest;
-
 #[macro_use]
 extern crate pest_derive;
+
+use crate::engine::error::NotConvergedError;
 
 mod command;
 mod device;
@@ -14,7 +15,7 @@ mod node_collection;
 mod parser;
 mod spice_fn;
 
-fn main() {
+fn main() -> Result<(), NotConvergedError> {
     let args: Vec<String> = env::args().collect();
 
     let file = &args
@@ -28,17 +29,19 @@ fn main() {
     let mut engine = engine::Engine::new(elems, cmds);
 
     if let Some(_) = engine.op_cmd {
-        let res = engine.run_op();
+        let res = engine.run_op()?;
         res.print();
     }
 
     if let Some(_) = engine.dc_cmd {
-        let res = engine.run_dc();
+        let res = engine.run_dc()?;
         res.print();
     }
 
     if let Some(_) = engine.tran_cmd {
-        let res = engine.run_tran();
+        let res = engine.run_tran()?;
         res.print();
     }
+
+    Ok(())
 }
