@@ -197,7 +197,7 @@ mod tests {
     use super::*;
 
     fn parse_ind(ind: &Ind) -> NodeCollection {
-        NodeCollection::from_elems(&vec![Box::new(ind.clone())])
+        NodeCollection::from_elems(&[Box::new(ind.clone())])
     }
 
     fn test_ind(nodes: &[&str]) -> Ind {

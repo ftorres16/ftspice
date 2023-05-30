@@ -91,7 +91,7 @@ mod tests {
     use super::*;
 
     fn parse_vdd(vdd: &Vdd) -> NodeCollection {
-        NodeCollection::from_elems(&vec![Box::new(vdd.clone())])
+        NodeCollection::from_elems(&[Box::new(vdd.clone())])
     }
 
     fn test_vdd(nodes: &[&str]) -> Vdd {

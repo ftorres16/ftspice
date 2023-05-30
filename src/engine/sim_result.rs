@@ -7,7 +7,7 @@ pub struct SimResult {
 }
 
 impl SimResult {
-    pub fn new(headers: &Vec<&str>) -> Self {
+    pub fn new(headers: &[&str]) -> Self {
         SimResult {
             data: vec![],
             headers: headers.iter().map(|x| x.to_string()).collect(),

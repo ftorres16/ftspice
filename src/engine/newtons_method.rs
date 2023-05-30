@@ -64,7 +64,7 @@ pub fn solve(
     n_iters
 }
 
-fn dampen_step(step: &Vec<f64>) -> Vec<f64> {
+fn dampen_step(step: &[f64]) -> Vec<f64> {
     step.iter()
         .map(|x| DAMPING_GAMMA / DAMPING_K * x.signum() * (DAMPING_K * x.abs()).ln_1p())
         .collect::<Vec<_>>()

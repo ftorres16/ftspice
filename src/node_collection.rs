@@ -10,7 +10,7 @@ pub struct NodeCollection {
 }
 
 impl NodeCollection {
-    pub fn from_elems(elems: &Vec<Box<dyn Stamp>>) -> Self {
+    pub fn from_elems(elems: &[Box<dyn Stamp>]) -> Self {
         let mut map = BTreeMap::new();
 
         let v_names = elems
@@ -46,15 +46,20 @@ impl NodeCollection {
         NodeCollection { data: map }
     }
 
-    pub fn from_startup_elems(elems: &Vec<Box<dyn Stamp>>) -> Self {
+    pub fn from_startup_elems(elems: &[Box<dyn Stamp>]) -> Self {
         let mut nc = NodeCollection::from_elems(elems);
         let nc_len = nc.data.len();
 
+        fn is_startup_elem(e: &Box<dyn Stamp>) -> bool {
+            matches!((e.gtype(), e.gtype_startup()), (GType::G1, GType::G2))
+        }
+
         let i_names = elems
             .iter()
-            .filter(|e| matches!((e.gtype(), e.gtype_startup()), (GType::G1, GType::G2)))
+            .filter(|e| is_startup_elem(e))
             .map(|e| e.get_name())
             .collect::<BTreeSet<_>>();
+
         nc.data.extend(i_names.iter().enumerate().map(|(i, n)| {
             (
                 n.to_string(),
