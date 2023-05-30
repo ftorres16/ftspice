@@ -5,6 +5,7 @@ use ndarray::prelude::*;
 use crate::command;
 use crate::device::Stamp;
 use crate::engine::mna::MNA;
+use crate::engine::transient::state_history::StateHistory;
 use crate::engine::transient::T_STEP_MIN;
 use crate::node_collection::NodeCollection;
 
@@ -156,7 +157,7 @@ impl Engine {
             x[node.idx] = startup_res.get(name)[0];
         }
 
-        let mut state_hist = Vec::new();
+        let mut state_hist = StateHistory::new();
 
         let mut t = tran_params.start;
         let mut h = T_STEP_MIN;

@@ -1,13 +1,13 @@
 use ndarray::prelude::*;
 
 pub fn solve(a_mat: &mut Array2<f64>, b_vec: &mut Array1<f64>, x_vec: &mut Array1<f64>) {
-    for curr_row in 0..a_mat.nrows() {
+    for k in 0..a_mat.nrows() {
         // Pivot
-        let mut max_idx = curr_row;
-        let mut max_val = a_mat[(curr_row, curr_row)].abs();
+        let mut max_idx = k;
+        let mut max_val = a_mat[(k, k)].abs();
 
-        for next_row in (curr_row + 1)..a_mat.nrows() {
-            let next_val = a_mat[(next_row, curr_row)].abs();
+        for next_row in (k + 1)..a_mat.nrows() {
+            let next_val = a_mat[(next_row, k)].abs();
 
             if next_val > max_val {
                 max_idx = next_row;
@@ -16,42 +16,39 @@ pub fn solve(a_mat: &mut Array2<f64>, b_vec: &mut Array1<f64>, x_vec: &mut Array
         }
 
         // Reorder rows
-        if max_idx != curr_row {
+        if max_idx != k {
             let mut it = a_mat.axis_iter_mut(Axis(0));
-            ndarray::Zip::from(it.nth(curr_row).unwrap())
-                .and(it.nth(max_idx - (curr_row + 1)).unwrap())
+            ndarray::Zip::from(it.nth(k).unwrap())
+                .and(it.nth(max_idx - (k + 1)).unwrap())
                 .for_each(std::mem::swap);
 
-            let tmp = b_vec[curr_row];
-            b_vec[curr_row] = b_vec[max_idx];
+            let tmp = b_vec[k];
+            b_vec[k] = b_vec[max_idx];
             b_vec[max_idx] = tmp;
         }
 
-        // Scale
-        for next_row in (curr_row + 1)..a_mat.nrows() {
-            a_mat[(next_row, curr_row)] /= a_mat[(curr_row, curr_row)];
-        }
+        // Scale under diagonal
+        let alpha = 1.0 / a_mat[(k, k)];
+        a_mat.slice_mut(s![k + 1.., k]).mapv_inplace(|x| alpha * x);
+
         // Subtract
-        for next_row in (curr_row + 1)..a_mat.nrows() {
-            for next_col in (curr_row + 1)..a_mat.nrows() {
-                a_mat[(next_row, next_col)] -=
-                    a_mat[(next_row, curr_row)] * a_mat[(curr_row, next_col)];
+        for i in (k + 1)..a_mat.nrows() {
+            for j in (k + 1)..a_mat.nrows() {
+                a_mat[(i, j)] -= a_mat[(i, k)] * a_mat[(k, j)];
             }
 
-            b_vec[next_row] -= a_mat[(next_row, curr_row)] * b_vec[curr_row];
+            b_vec[i] -= a_mat[(i, k)] * b_vec[k];
         }
     }
 
     // Backwards substitution
-    for row in 0..b_vec.len() {
-        x_vec[row] = b_vec[row];
-    }
+    x_vec.assign(&b_vec);
 
-    for curr_row in (0..a_mat.nrows()).rev() {
-        x_vec[curr_row] /= a_mat[(curr_row, curr_row)];
+    for i in (0..a_mat.nrows()).rev() {
+        x_vec[i] /= a_mat[(i, i)];
 
-        for next_row in (0..curr_row).rev() {
-            x_vec[next_row] -= x_vec[curr_row] * a_mat[(next_row, curr_row)];
+        for j in (0..i).rev() {
+            x_vec[j] -= x_vec[i] * a_mat[(j, i)];
         }
     }
 }
