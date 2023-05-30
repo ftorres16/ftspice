@@ -1,14 +1,15 @@
 use std::collections::HashMap;
-use std::iter::successors;
+
+use ndarray::prelude::*;
 
 use crate::command;
 use crate::device::Stamp;
 use crate::engine::mna::MNA;
+use crate::engine::transient::state_history::StateHistory;
 use crate::engine::transient::T_STEP_MIN;
 use crate::node_collection::NodeCollection;
 
 mod gauss_lu;
-mod linalg;
 mod mna;
 mod newtons_method;
 mod node_vec_norm;
@@ -113,10 +114,7 @@ impl Engine {
 
         let val_bkp = self.elems[sweep_idx].get_value();
 
-        let sweep_iter = successors(Some(dc_params.start), |x| {
-            let next = x + dc_params.step;
-            (next < dc_params.stop).then_some(next)
-        });
+        let sweep_iter = Array::range(dc_params.start, dc_params.stop, dc_params.step);
 
         for sweep_val in sweep_iter {
             self.elems[sweep_idx].undo_linear_stamp(&nodes, &mut mna.a, &mut mna.b);
@@ -159,7 +157,7 @@ impl Engine {
             x[node.idx] = startup_res.get(name)[0];
         }
 
-        let mut state_hist = Vec::new();
+        let mut state_hist = StateHistory::new();
 
         let mut t = tran_params.start;
         let mut h = T_STEP_MIN;

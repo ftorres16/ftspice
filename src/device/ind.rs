@@ -1,3 +1,5 @@
+use ndarray::prelude::*;
+
 use crate::device::{GType, Stamp};
 use crate::node_collection::NodeCollection;
 
@@ -37,7 +39,7 @@ impl Stamp for Ind {
         self.val = value;
     }
 
-    fn init_state(&mut self, nodes: &NodeCollection, x: &Vec<f64>) {
+    fn init_state(&mut self, nodes: &NodeCollection, x: &Array1<f64>) {
         let is_idx = nodes
             .get_idx(&self.name)
             .expect("Couldn't find label for inductor");
@@ -46,7 +48,7 @@ impl Stamp for Ind {
         self.i_curr = Some(x[is_idx]);
     }
 
-    fn update_state(&mut self, nodes: &NodeCollection, x: &Vec<f64>, h: &f64) {
+    fn update_state(&mut self, nodes: &NodeCollection, x: &Array1<f64>, h: &f64) {
         let vpos_idx = nodes.get_idx(&self.nodes[0]);
         let vneg_idx = nodes.get_idx(&self.nodes[1]);
 
@@ -68,8 +70,8 @@ impl Stamp for Ind {
     fn linear_startup_stamp(
         &self,
         nodes: &NodeCollection,
-        a: &mut Vec<Vec<f64>>,
-        b: &mut Vec<f64>,
+        a: &mut Array2<f64>,
+        b: &mut Array1<f64>,
     ) {
         let vpos_idx = nodes.get_idx(&self.nodes[0]);
         let vneg_idx = nodes.get_idx(&self.nodes[1]);
@@ -80,20 +82,20 @@ impl Stamp for Ind {
         b[is_idx] = 0.0;
 
         if let Some(i) = vpos_idx {
-            a[is_idx][i] += 1.0;
-            a[i][is_idx] += 1.0;
+            a[(is_idx, i)] += 1.0;
+            a[(i, is_idx)] += 1.0;
         }
         if let Some(i) = vneg_idx {
-            a[is_idx][i] -= 1.0;
-            a[i][is_idx] -= 1.0;
+            a[(is_idx, i)] -= 1.0;
+            a[(i, is_idx)] -= 1.0;
         }
     }
 
     fn undo_linear_startup_stamp(
         &self,
         nodes: &NodeCollection,
-        a: &mut Vec<Vec<f64>>,
-        b: &mut Vec<f64>,
+        a: &mut Array2<f64>,
+        b: &mut Array1<f64>,
     ) {
         let vpos_idx = nodes.get_idx(&self.nodes[0]);
         let vneg_idx = nodes.get_idx(&self.nodes[1]);
@@ -104,22 +106,22 @@ impl Stamp for Ind {
         b[is_idx] = 0.0;
 
         if let Some(i) = vpos_idx {
-            a[is_idx][i] -= 1.0;
-            a[i][is_idx] -= 1.0;
+            a[(is_idx, i)] -= 1.0;
+            a[(i, is_idx)] -= 1.0;
         }
         if let Some(i) = vneg_idx {
-            a[is_idx][i] -= 1.0;
-            a[i][is_idx] -= 1.0;
+            a[(is_idx, i)] -= 1.0;
+            a[(i, is_idx)] -= 1.0;
         }
     }
 
     fn dynamic_stamp(
         &self,
         nodes: &NodeCollection,
-        x: &Vec<f64>,
+        x: &Array1<f64>,
         h: &f64,
-        a: &mut Vec<Vec<f64>>,
-        b: &mut Vec<f64>,
+        a: &mut Array2<f64>,
+        b: &mut Array1<f64>,
     ) {
         let vpos_idx = nodes.get_idx(&self.nodes[0]);
         let vneg_idx = nodes.get_idx(&self.nodes[1]);
@@ -139,26 +141,26 @@ impl Stamp for Ind {
         let i_eq = l.i_eq(h);
 
         if let Some(i) = vpos_idx {
-            a[i][i] += g_eq;
+            a[(i, i)] += g_eq;
             b[i] -= i_eq;
         }
         if let Some(i) = vneg_idx {
-            a[i][i] += g_eq;
+            a[(i, i)] += g_eq;
             b[i] += i_eq;
         }
         if let (Some(i), Some(j)) = (vneg_idx, vpos_idx) {
-            a[i][j] -= g_eq;
-            a[j][i] -= g_eq;
+            a[(i, j)] -= g_eq;
+            a[(j, i)] -= g_eq;
         }
     }
 
     fn undo_dynamic_stamp(
         &self,
         nodes: &NodeCollection,
-        x: &Vec<f64>,
+        x: &Array1<f64>,
         h: &f64,
-        a: &mut Vec<Vec<f64>>,
-        b: &mut Vec<f64>,
+        a: &mut Array2<f64>,
+        b: &mut Array1<f64>,
     ) {
         let vpos_idx = nodes.get_idx(&self.nodes[0]);
         let vneg_idx = nodes.get_idx(&self.nodes[1]);
@@ -178,16 +180,16 @@ impl Stamp for Ind {
         let i_eq = l.i_eq(h);
 
         if let Some(i) = vpos_idx {
-            a[i][i] -= g_eq;
+            a[(i, i)] -= g_eq;
             b[i] += i_eq;
         }
         if let Some(i) = vneg_idx {
-            a[i][i] -= g_eq;
+            a[(i, i)] -= g_eq;
             b[i] -= i_eq;
         }
         if let (Some(i), Some(j)) = (vneg_idx, vpos_idx) {
-            a[i][j] += g_eq;
-            a[j][i] += g_eq;
+            a[(i, j)] += g_eq;
+            a[(j, i)] += g_eq;
         }
     }
 }
@@ -214,9 +216,9 @@ mod tests {
     fn test_dynamic_stamp() {
         let ind = test_ind(&["1", "2"]);
         let nodes = parse_ind(&ind);
-        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
-        let mut b: Vec<f64> = vec![0.0; 2];
-        let x = vec![1.0, 2.0];
+        let mut a = Array2::zeros((2, 2));
+        let mut b = Array1::zeros(2);
+        let x = array![1.0, 2.0];
         let h = 1e-8;
 
         ind.dynamic_stamp(&nodes, &x, &h, &mut a, &mut b);
@@ -224,10 +226,10 @@ mod tests {
         let n1 = nodes.get_idx("1").unwrap();
         let n2 = nodes.get_idx("2").unwrap();
 
-        assert!(a[n1][n1] > 0.0);
-        assert!(a[n1][n2] < 0.0);
-        assert!(a[n2][n1] < 0.0);
-        assert!(a[n2][n2] > 0.0);
+        assert!(a[(n1, n1)] > 0.0);
+        assert!(a[(n1, n2)] < 0.0);
+        assert!(a[(n2, n1)] < 0.0);
+        assert!(a[(n2, n2)] > 0.0);
 
         assert!(b[n1] < 0.0);
         assert!(b[n2] > 0.0);
@@ -237,15 +239,15 @@ mod tests {
     fn test_undo_dynamic_stamp() {
         let ind = test_ind(&["1", "2"]);
         let nodes = parse_ind(&ind);
-        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
-        let mut b: Vec<f64> = vec![0.0; 2];
-        let x = vec![1.0, 2.0];
+        let mut a = Array2::zeros((2, 2));
+        let mut b = Array1::zeros(2);
+        let x = array![1.0, 2.0];
         let h = 1e-8;
 
         ind.dynamic_stamp(&nodes, &x, &h, &mut a, &mut b);
         ind.undo_dynamic_stamp(&nodes, &x, &h, &mut a, &mut b);
 
-        assert_eq!(a, [[0.0, 0.0], [0.0, 0.0]]);
-        assert_eq!(b, [0.0, 0.0]);
+        assert_eq!(a, array![[0.0, 0.0], [0.0, 0.0]]);
+        assert_eq!(b, array![0.0, 0.0]);
     }
 }

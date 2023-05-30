@@ -1,3 +1,5 @@
+use ndarray::prelude::*;
+
 use crate::device::{GType, Stamp};
 use crate::node_collection::NodeCollection;
 
@@ -37,28 +39,28 @@ impl Stamp for NMOS {
     fn nonlinear_funcs(
         &self,
         nodes: &NodeCollection,
-        h_mat: &mut Vec<Vec<f64>>,
-        g_vec: &mut Vec<Box<dyn Fn(&Vec<f64>) -> f64>>,
+        h_mat: &mut Array2<f64>,
+        g_vec: &mut Vec<Box<dyn Fn(&Array1<f64>) -> f64>>,
     ) {
         let vd_idx = nodes.get_idx(&self.nodes[0]);
         let vg_idx = nodes.get_idx(&self.nodes[1]);
         let vs_idx = nodes.get_idx(&self.nodes[2]);
 
         if let Some(i) = vd_idx {
-            h_mat[i][g_vec.len()] = 1.0;
+            h_mat[(i, g_vec.len())] = 1.0;
         }
         if let Some(i) = vg_idx {
-            h_mat[i][g_vec.len() + 1] = 1.0;
+            h_mat[(i, g_vec.len() + 1)] = 1.0;
         }
         if let Some(i) = vs_idx {
-            h_mat[i][g_vec.len() + 2] = 1.0;
+            h_mat[(i, g_vec.len() + 2)] = 1.0;
         }
 
         fn get_model(
             vd_idx: Option<usize>,
             vg_idx: Option<usize>,
             vs_idx: Option<usize>,
-            x: &Vec<f64>,
+            x: &Array1<f64>,
         ) -> model::Model {
             let mut vd = vd_idx.map_or(0.0, |i| x[i]);
             let vg = vg_idx.map_or(0.0, |i| x[i]);
@@ -71,15 +73,15 @@ impl Stamp for NMOS {
             model::Model { vd, vg, vs }
         }
 
-        g_vec.push(Box::new(move |x: &Vec<f64>| {
+        g_vec.push(Box::new(move |x: &Array1<f64>| {
             let m = get_model(vd_idx, vg_idx, vs_idx, x);
             m.id()
         }));
-        g_vec.push(Box::new(move |x: &Vec<f64>| {
+        g_vec.push(Box::new(move |x: &Array1<f64>| {
             let m = get_model(vd_idx, vg_idx, vs_idx, x);
             m.ig()
         }));
-        g_vec.push(Box::new(move |x: &Vec<f64>| {
+        g_vec.push(Box::new(move |x: &Array1<f64>| {
             let m = get_model(vd_idx, vg_idx, vs_idx, x);
             m.is()
         }));
@@ -88,9 +90,9 @@ impl Stamp for NMOS {
     fn nonlinear_stamp(
         &self,
         nodes: &NodeCollection,
-        x: &Vec<f64>,
-        a: &mut Vec<Vec<f64>>,
-        b: &mut Vec<f64>,
+        x: &Array1<f64>,
+        a: &mut Array2<f64>,
+        b: &mut Array1<f64>,
     ) {
         let mut vd_idx = nodes.get_idx(&self.nodes[0]);
         let vg_idx = nodes.get_idx(&self.nodes[1]);
@@ -112,22 +114,22 @@ impl Stamp for NMOS {
         let ieq = m.ieq();
 
         if let Some(i) = vd_idx {
-            a[i][i] += gds;
+            a[(i, i)] += gds;
             b[i] -= ieq;
         }
         if let Some(i) = vs_idx {
-            a[i][i] += gds + gm;
+            a[(i, i)] += gds + gm;
             b[i] += ieq;
         }
         if let (Some(i), Some(j)) = (vd_idx, vs_idx) {
-            a[i][j] -= gds + gm;
-            a[j][i] -= gds;
+            a[(i, j)] -= gds + gm;
+            a[(j, i)] -= gds;
         }
         if let (Some(i), Some(j)) = (vd_idx, vg_idx) {
-            a[i][j] += gm;
+            a[(i, j)] += gm;
         }
         if let (Some(i), Some(j)) = (vs_idx, vg_idx) {
-            a[i][j] -= gm;
+            a[(i, j)] -= gm;
         }
     }
 }
@@ -147,13 +149,13 @@ mod tests {
             nodes: vec![String::from("1"), String::from("2"), String::from("3")],
         };
         let nodes = parse_nmos(&m);
-        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
-        let mut b: Vec<f64> = vec![0.0; 2];
+        let mut a = Array2::zeros((2, 2));
+        let mut b = Array1::zeros(2);
 
         m.linear_stamp(&nodes, &mut a, &mut b);
 
-        assert_eq!(a, [[0.0, 0.0], [0.0, 0.0]]);
-        assert_eq!(b, [0.0, 0.0]);
+        assert_eq!(a, array![[0.0, 0.0], [0.0, 0.0]]);
+        assert_eq!(b, array![0.0, 0.0]);
     }
 
     #[test]
@@ -163,14 +165,14 @@ mod tests {
             nodes: vec![String::from("1"), String::from("2"), String::from("3")],
         };
         let nodes = parse_nmos(&m);
-        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 2]; 2];
-        let mut b: Vec<f64> = vec![0.0; 2];
+        let mut a = Array2::zeros((2, 2));
+        let mut b = Array1::zeros(2);
 
         m.linear_stamp(&nodes, &mut a, &mut b);
         m.undo_linear_stamp(&nodes, &mut a, &mut b);
 
-        assert_eq!(a, [[0.0, 0.0], [0.0, 0.0]]);
-        assert_eq!(b, [0.0, 0.0]);
+        assert_eq!(a, array![[0.0, 0.0], [0.0, 0.0]]);
+        assert_eq!(b, array![0.0, 0.0]);
     }
 
     #[test]
@@ -180,8 +182,8 @@ mod tests {
             nodes: vec![String::from("1"), String::from("2"), String::from("3")],
         };
         let nodes = parse_nmos(&m);
-        let mut h: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
-        let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
+        let mut h = Array2::zeros((3, 3));
+        let mut g = Vec::new();
 
         m.nonlinear_funcs(&nodes, &mut h, &mut g);
 
@@ -195,8 +197,8 @@ mod tests {
             nodes: vec![String::from("1"), String::from("2"), String::from("3")],
         };
         let nodes = parse_nmos(&m);
-        let mut h: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
-        let mut g: Vec<Box<dyn Fn(&Vec<f64>) -> f64>> = Vec::new();
+        let mut h = Array2::zeros((3, 3));
+        let mut g = Vec::new();
 
         m.nonlinear_funcs(&nodes, &mut h, &mut g);
 
@@ -204,15 +206,15 @@ mod tests {
         let n2 = nodes.get_idx("2").unwrap();
         let n3 = nodes.get_idx("3").unwrap();
 
-        let mut h_model = vec![vec![0.0; h[0].len()]; h.len()];
-        h_model[n1][0] = 1.0;
-        h_model[n2][1] = 1.0;
-        h_model[n3][2] = 1.0;
+        let mut h_model = Array2::zeros(h.raw_dim());
+        h_model[(n1, 0)] = 1.0;
+        h_model[(n2, 1)] = 1.0;
+        h_model[(n3, 2)] = 1.0;
 
         assert_eq!(h, h_model);
         assert_eq!(g.len(), 3);
 
-        let mut x_test: Vec<f64> = vec![0.0; 3];
+        let mut x_test = Array1::zeros(3);
         x_test[n1] = 2.0;
         x_test[n2] = 1.0;
         x_test[n3] = 0.0;
@@ -234,23 +236,23 @@ mod tests {
         let n2 = nodes.get_idx("2").unwrap();
         let n3 = nodes.get_idx("3").unwrap();
 
-        let mut x: Vec<f64> = vec![0.0; 3];
+        let mut x = Array1::zeros(3);
         x[n1] = 2.0;
         x[n2] = 1.0;
         x[n3] = 0.0;
 
-        let mut a: Vec<Vec<f64>> = vec![vec![0.0; 3]; 3];
-        let mut b: Vec<f64> = vec![0.0; 3];
+        let mut a = Array2::zeros((3, 3));
+        let mut b = Array1::zeros(3);
 
         m.nonlinear_stamp(&nodes, &x, &mut a, &mut b);
 
-        assert!(a[n1][n1] > 0.0);
-        assert!(a[n1][n2] > 0.0);
-        assert!(a[n1][n3] < 0.0);
-        assert_eq!(a[n2], [0.0, 0.0, 0.0]);
-        assert!(a[n3][n1] < 0.0);
-        assert!(a[n3][n2] < 0.0);
-        assert!(a[n3][n3] > 0.0);
+        assert!(a[(n1, n1)] > 0.0);
+        assert!(a[(n1, n2)] > 0.0);
+        assert!(a[(n1, n3)] < 0.0);
+        assert_eq!(a.slice(s!(n2, ..)), array![0.0, 0.0, 0.0]);
+        assert!(a[(n3, n1)] < 0.0);
+        assert!(a[(n3, n2)] < 0.0);
+        assert!(a[(n3, n3)] > 0.0);
 
         assert!(b[n1] > 0.0);
         assert_eq!(b[n2], 0.0);

@@ -1,3 +1,5 @@
+use ndarray::prelude::*;
+
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -33,7 +35,7 @@ impl SimResult {
         }
     }
 
-    pub fn get(&self, label: &str) -> Vec<f64> {
+    pub fn get(&self, label: &str) -> Array1<f64> {
         let idx = self
             .headers
             .iter()
